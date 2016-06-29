@@ -1,0 +1,231 @@
+*&---------------------------------------------------------------------*
+*& Report  ZDTP_MASSDOWNLOAD_AVRA
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  ZDTP_MASSDOWNLOAD_AVRA.
+
+*----------------------------------------------------------------------------------------------------------------------
+*  SAP Tables
+*----------------------------------------------------------------------------------------------------------------------
+tables: trdir, seoclass, tfdir, enlfdir, dd02l, tadiv.
+type-pools: abap, seor.
+
+*----------------------------------------------------------------------------------------------------------------------
+*  Types
+*----------------------------------------------------------------------------------------------------------------------
+* text element structure
+types: tTextTable like textpool.
+* GUI titles
+types: tGUITitle like d347t.
+
+* Message classes
+types: begin of tMessage,
+         arbgb like t100-arbgb,
+         stext like t100a-stext,
+         msgnr like t100-msgnr,
+         text  like t100-text,
+       end of tMessage.
+
+* Screen flow.
+types: begin of tScreenFlow,
+         screen like d020s-dnum,
+         code like d022s-line,
+       end of tScreenFlow.
+
+* Holds a tabledefinition
+types: begin of tDictTableStructure,
+         fieldname like dd03l-fieldname,
+         position  like dd03l-position,
+         keyflag   like dd03l-keyflag,
+         rollname  like dd03l-rollname,
+         domname   like dd03l-domname,
+         datatype  like dd03l-datatype,
+         leng      like dd03l-leng,
+         lowercase type lowercase,
+         ddtext    like dd04t-ddtext,
+       end of tdictTableStructure.
+
+* Holds a tables attributes + its definition
+types: begin of tDictTable,
+         tablename    like dd03l-tabname,
+         tableTitle   like dd02t-ddtext,
+         iStructure type tDictTableStructure occurs 0,
+       end of tDictTable.
+
+types: begin of tDictFilename,
+         tablename    like dd03l-tabname,
+         filename type string,
+       end of tDictFilename.
+
+* Include program names
+types: begin of tInclude,
+         includeName like trdir-name,
+         includeTitle like tftit-stext,
+       end of tInclude.
+
+* Exception class texts
+types: begin of tConcept,
+         constName type string,
+         concept type sotr_conc,
+       end of tConcept.
+
+* Method
+types: begin of tMethod,
+         cmpName(61),
+         descript like vseomethod-descript,
+         exposure like vseomethod-exposure,
+         methodKey type string,
+       end of tMethod.
+
+* Interfaces
+types: begin of tInterface,
+         interfaceName like vseoclass-clsname,
+       end of tInterface.
+
+* Class
+types: begin of tClass,
+         scanned(1),
+         clsname like vseoclass-clsname,
+         descript like vseoclass-descript,
+         msg_id like vseoclass-msg_id,
+         exposure like vseoclass-exposure,
+         state like vseoclass-state,
+         clsfinal like vseoclass-clsfinal,
+         r3release like vseoclass-r3release,
+         iMethods type tMethod occurs 0,
+         iDictStruct type tDictTable occurs 0,
+         iTextElements type tTextTable occurs 0,
+         iMessages type tMessage occurs 0,
+         iInterfaces type tInterface occurs 0,
+         iConcepts type tConcept occurs 0,
+         textElementKey type string,
+         publicClassKey type string,
+         privateClassKey type string,
+         protectedClassKey type string,
+         typesClassKey type string,
+         exceptionClass type abap_bool,
+       end of tClass.
+
+* function modules
+types: begin of tFunction,
+         functionName like tfdir-funcName,
+         functionGroup like enlfdir-area,
+         includeNumber like tfdir-include,
+         functionMainInclude like tfdir-funcName,
+         functionTitle like tftit-stext,
+         topIncludeName like tfdir-funcName,
+         progname like tfdir-pname,
+         programLinkName like tfdir-pname,
+         messageClass like t100-arbgb,
+         iTextElements type tTextTable occurs 0,
+         iSelectiontexts type tTextTable occurs 0,
+         iMessages type tMessage occurs 0,
+         iIncludes type tInclude occurs 0,
+         iDictStruct type tDictTable occurs 0,
+         iGUITitle type tGUITitle occurs 0,
+         iScreenFlow type tScreenFlow occurs 0,
+       end of tFunction.
+
+types: begin of tProgram,
+         progname like trdir-name,
+         programTitle like tftit-stext,
+         subc like trdir-subc,
+         messageClass like t100-arbgb,
+         iMessages type tMessage occurs 0,
+         iTextElements type tTextTable occurs 0,
+         iSelectiontexts type tTextTable occurs 0,
+         iGUITitle type tGUITitle occurs 0,
+         iScreenFlow type tScreenFlow occurs 0,
+         iIncludes type tInclude occurs 0,
+         iDictStruct type tDictTable occurs 0,
+       end of tProgram.
+
+*----------------------------------------------------------------------------------------------------------------------
+*  Internal tables
+*----------------------------------------------------------------------------------------------------------------------
+*  Dictionary object
+data: iDictionary type standard table of tDictTable with header line.
+*  Dictionary objects which have previously been downloaded
+data: iDictFilename type standard table of tDictFilename with header line.
+* Function modules.
+data: iFunctions type standard table of tFunction with header line.
+* Function modules used within programs.
+data: iProgFunctions type standard table of tFunction with header line.
+* Tree display structure.
+data: iTreeDisplay type standard table of snodetext with header line.
+* Message class data
+data: iMessages type standard table of tMessage with header line.
+* Holds a single message class an all of its messages
+data: iSingleMessageClass type standard table of tMessage with header line.
+* Holds program related data
+data: iPrograms type standard table of tProgram with header line.
+* Classes
+data: iClasses type standard table of tClass with header line.
+* Table of paths created on the SAP server
+data: iServerPaths type standard table of string with header line.
+
+*----------------------------------------------------------------------------------------------------------------------
+*  Table prototypes
+*----------------------------------------------------------------------------------------------------------------------
+data: dumiDictStructure type standard table of tDictTableStructure.
+data: dumiTextTab type standard table of tTextTable.
+data: dumiIncludes type standard table of tInclude.
+data: dumiHtml type standard table of string.
+data: dumiHeader type standard table of string .
+data: dumiScreen type standard table of tScreenFlow .
+data: dumIGUITitle type standard table of tGUITitle.
+data: dumiMethods type standard table of tMethod.
+data: dumiConcepts type standard table of tConcept.
+data: dumiInterfaces type standard table of tInterface.
+
+*----------------------------------------------------------------------------------------------------------------------
+*   Global objects
+*----------------------------------------------------------------------------------------------------------------------
+data: objFile type ref to cl_gui_frontend_services.
+data: objRuntimeError type ref to cx_root.
+
+*----------------------------------------------------------------------------------------------------------------------
+*  Constants
+*----------------------------------------------------------------------------------------------------------------------
+constants: VERSIONNO type string value '1.4.4'.
+constants: TABLES type string value 'TABLES'.
+constants: TABLE type string value 'TABLE'.
+constants: LIKE type string value 'LIKE'.
+constants: TYPE type string value 'TYPE'.
+constants: TYPEREFTO type string value 'TYPE REF TO'.
+constants: STRUCTURE type string value 'STRUCTURE'.
+constants: LOWSTRUCTURE type string value 'structure'.
+constants: OCCURS type string value 'OCCURS'.
+constants: FUNCTION type string value 'FUNCTION'.
+constants: CALLFUNCTION type string value ' CALL FUNCTION'.
+constants: MESSAGE type string  value 'MESSAGE'.
+constants: INCLUDE type string value 'INCLUDE'.
+constants: LOWINCLUDE type string value 'include'.
+constants: DESTINATION type string value 'DESTINATION'.
+constants: IS_TABLE type string value 'T'.
+constants: IS_PROGRAM type string value 'P'.
+constants: IS_SCREEN type string value 'S'.
+constants: IS_GUITITLE type string value 'G'.
+constants: IS_DOCUMENTATION type string value 'D'.
+constants: IS_MESSAGECLASS type string value 'MC'.
+constants: IS_FUNCTION type string value 'F'.
+constants: IS_CLASS type string value 'C'.
+constants: IS_METHOD type string value 'M'.
+constants: ASTERIX type string value '*'.
+constants: COMMA type string value ','.
+constants: PERIOD type string value '.'.
+constants: DASH type string value '-'.
+constants: TRUE type abap_bool value 'X'.
+constants: FALSE type abap_bool value ''.
+constants: LT type string value '&lt;'.
+constants: GT type string value '&gt;'.
+constants: UNIX type string value 'UNIX'.
+constants: NON_UNIX type string value 'not UNIX'.
+constants: HTMLEXTENSION type string value 'html'.
+constants: TEXTEXTENSION type string value 'txt'.
+constants: SS_CODE type c value 'C'.
+constants: SS_TABLE type c value 'T'.
