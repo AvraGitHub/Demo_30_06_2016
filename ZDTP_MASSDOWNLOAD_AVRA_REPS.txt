@@ -804,4 +804,144 @@ start-of-selection.
       endloop.
 
 
+*   Select programs
+    when rProg.
+      perform retrievePrograms using iPrograms[]
+                                     iProgFunctions[]
+                                     soProgramName[]    "Program name
+                                     soAuthor[]         "Author
+                                     customerNamespace  "Customer name range
+                                     pMod               "Also modified by author
+                                     pCust              "Customer object only
+                                     pMess              "Find messages
+                                     pText              "Text Elements
+                                     pDict              "Dictionay structures
+                                     pFunc              "Get functions
+                                     pInc               "Get includes
+                                     pScr               "Get screens
+                                     pRecF              "Search recursively for functions
+                                     pRecI              "Search recursively for includes
+                                     soPack[].             "Package
+  endcase.
+
+*----------------------------------------------------------------------------------------------------------------------
+end-of-selection.
+*----------------------------------------------------------------------------------------------------------------------
+  if forcedExit = 0.
+*   Decide what to download
+    case 'X'.
+*     Download tables
+      when rTable.
+        if not ( iDictionary[] is initial ).
+          perform downloadDDStructures using iDictionary[]
+                                             iDictFilename[]
+                                             downloadFolder
+                                             HTMLEXtension
+                                             space
+                                             pSortT
+                                             slashSeparatorToUse
+                                             pServ
+                                             pProMess
+                                             serverFileSystem
+                                             pBack.
+        endif.
+
+*     Download message class
+      when rMess.
+        if not ( iMessages[] is initial ).
+          sort iMessages ascending by arbgb msgnr.
+          loop at iMessages.
+            append iMessages to iSingleMessageClass.
+            at end of arbgb.
+              perform downloadMessageClass using iSingleMessageClass[]
+                                                 iMessages-arbgb
+                                                 downloadFolder
+                                                 downloadFileExtension
+                                                 pHtml
+                                                 space
+                                                 customerNameSpace
+                                                 pInc
+                                                 pDict
+                                                 pMess
+                                                 slashSeparatorToUse
+                                                 pServ
+                                                 pProMess
+                                                 serverFileSystem
+                                                 pBack.
+              clear iSingleMessageClass[].
+            endat.
+          endloop.
+       endif.
+
+*     Download functions
+      when rFunc.
+        if not ( iFunctions[] is initial ).
+           perform downloadFunctions using iFunctions[]
+                                           iDictFilename[]
+                                           downloadFolder
+                                           downloadFileExtension
+                                           space
+                                           pFDoc
+                                           pHtml
+                                           customerNameSpace
+                                           pInc
+                                           pDict
+                                           TEXTEXTENSION
+                                           HTMLEXTENSION
+                                           pSortT
+                                           slashSeparatorToUse
+                                           pServ
+                                           pProMess
+                                           serverFileSystem
+                                           pBack.
+        endif.
+
+*     Download Classes
+      when rClass.
+        if not ( iClasses[] is initial ).
+          perform downloadClasses using iClasses[]
+                                        iFunctions[]
+                                        iDictFilename[]
+                                        downloadFolder
+                                        downloadFileExtension
+                                        HTMLEXTENSION
+                                        TEXTEXTENSION
+                                        pHtml
+                                        customerNameSpace
+                                        pInc
+                                        pDict
+                                        pCDoc
+                                        pSortT
+                                        slashSeparatorToUse
+                                        pServ
+                                        pProMess
+                                        serverFileSystem
+                                        pBack.
+        endif.
+
+*     Download programs
+      when rProg.
+        if not ( iPrograms[] is initial ).
+          perform downloadPrograms using iPrograms[]
+                                         iProgFunctions[]
+                                         iDictFilename[]
+                                         downloadFolder
+                                         downloadFileExtension
+                                         HTMLEXTENSION
+                                         TEXTEXTENSION
+                                         pHtml
+                                         customerNameSpace
+                                         pInc
+                                         pDict
+                                         '' "Documentation
+                                         pSortT
+                                         slashSeparatorToUse
+                                         pServ
+                                         pProMess
+                                         serverFileSystem
+                                         pBack.
+          endif.
+    endcase.
+
+
 
