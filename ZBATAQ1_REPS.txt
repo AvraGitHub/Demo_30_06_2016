@@ -148,3 +148,130 @@ SELECTION-SCREEN BEGIN OF BLOCK POST WITH FRAME TITLE TEXT-002.
 *                  account to be used when acct.curr. ne loc.curr.
                   P_RACCT  LIKE GLT0-RACCT MEMORY ID RCT. "account
 SELECTION-SCREEN END   OF BLOCK POST.
+* listing options
+SELECTION-SCREEN BEGIN OF BLOCK LIST WITH FRAME TITLE TEXT-003.
+  PARAMETERS:     P_SUMRY  RADIOBUTTON GROUP DTL,    "list summary
+                  P_DETAIL RADIOBUTTON GROUP DTL     "list detail
+                                       DEFAULT 'X'.
+SELECTION-SCREEN END   OF BLOCK LIST.
+* batch session params
+SELECTION-SCREEN BEGIN OF BLOCK BAT WITH FRAME TITLE TEXT-004.
+PARAMETERS:  P_GROUP  LIKE APQI-GROUPID MEMORY ID GRP OBLIGATORY,
+             P_KEEP   AS CHECKBOX MEMORY ID HLD,
+             P_HLDDTE LIKE SY-DATUM MEMORY ID DTE.
+  SELECTION-SCREEN SKIP.
+  PARAMETERS:     P_TEST   AS CHECKBOX MEMORY ID TST.
+SELECTION-SCREEN END OF BLOCK BAT.
+
+***********************************************************************
+* Set defaults                                                        *
+***********************************************************************
+INITIALIZATION.
+*  this gives documentation button
+  SET PF-STATUS 'MAIN'.
+*  defaults for selection params
+  GET PARAMETER ID 'RLD' FIELD P_RLDNR    .   "default ledger
+  IF P_RLDNR = SPACE. P_RLDNR = 'Z1'. ENDIF.
+  GET PARAMETER ID 'BUK' FIELD P_BUKRS.       "default company
+  IF P_BUKRS = SPACE. P_BUKRS = '0002'. ENDIF.
+  GET PARAMETER ID 'RTY' FIELD P_RRCTY.       "default record type
+  IF P_RRCTY = SPACE. P_RRCTY = '0'. ENDIF.
+  GET PARAMETER ID 'VER' FIELD P_RVERS.       "default version
+  IF P_RVERS = SPACE. P_RVERS = '001'. ENDIF.
+  GET PARAMETER ID 'ACT' FIELD S_RACCT.       "accounts
+  IF S_RACCT-LOW NE SPACE AND S_RACCT-SIGN CA 'IE'.
+    APPEND S_RACCT.
+  ENDIF.
+  GET PARAMETER ID 'KST' FIELD S_KOSTL.       "cost centres
+  IF S_KOSTL-LOW NE SPACE AND S_KOSTL-SIGN CA 'IE'.
+    APPEND S_KOSTL.
+  ENDIF.
+  GET PARAMETER ID 'BUD' FIELD S_BUDAT.       "posting date
+  IF S_BUDAT-LOW CN '0' AND S_BUDAT-SIGN CA 'IE'.
+    APPEND S_BUDAT.
+*   s_budat-low = sy-datum. s_budat-sign = 'I'.  s_budat-option = 'EQ'.
+  ENDIF.
+  GET PARAMETER ID 'CDT' FIELD S_CPUDT.       "document date
+  IF S_CPUDT-LOW CN '0' AND S_CPUDT-SIGN CA 'IE'.
+    APPEND S_CPUDT.
+*   s_cpudt-low = sy-datum. s_cpudt-sign = 'I'.  s_cpudt-option = 'EQ'.
+  ENDIF.
+* get parameter id 'FYR' field p_gjahr.       "fiscal year default
+* if p_gjahr = space. p_gjahr = sy-datum. endif.
+*  defaults for output document params
+  GET PARAMETER ID 'BLD' FIELD P_BLDAT.       "document date
+  IF P_BLDAT CO '0'. P_BLDAT = SY-DATUM. ENDIF.
+  GET PARAMETER ID 'BUD' FIELD P_BUDAT.       "posting date
+  IF P_BUDAT CO '0'. P_BUDAT = SY-DATUM. ENDIF.
+*  batch session params
+  GET PARAMETER ID 'GRP' FIELD P_GROUP.       "batch session id.
+  IF P_GROUP = SPACE. P_GROUP = 'F-02-001'. ENDIF.
+
+***********************************************************************
+* Check PF keys and parameters                                        *
+***********************************************************************
+AT SELECTION-SCREEN.
+*  check for DOKU documentation request
+  ASSIGN ('sscrfields-ucomm') TO <FIELD>.
+  CASE <FIELD>.
+    WHEN 'DOKU'. PERFORM DISPLAY_DOKU.
+  ENDCASE.
+*  Ledger
+  SELECT SINGLE * FROM T881 WHERE RLDNR = P_RLDNR.
+  IF SY-SUBRC NE 0.
+    SET CURSOR FIELD 'P_RLDNR'.
+    MESSAGE E999 WITH 'Ledger' P_RLDNR 'not defined in T881.'.
+  ENDIF.
+*  G/L accounts
+  SELECT * FROM SKB1 WHERE BUKRS = P_BUKRS
+                       AND SAKNR IN S_RACCT.
+    EXIT.
+  ENDSELECT.
+  IF SY-SUBRC NE 0.
+    SET CURSOR FIELD 'S_RLDNR-LOW'.
+    MESSAGE E999 WITH 'No G/L accounts defined by given selection'
+                      'for co.' P_BUKRS.
+  ENDIF.
+*  G/L account to be used if a/c curr. ne local curr.
+  IF P_RACCT IS INITIAL.
+    SET CURSOR FIELD 'P_RACCT'.
+    MESSAGE E999 WITH 'Selldown account must be given.'.
+  ENDIF.
+  SELECT SINGLE * FROM SKB1 WHERE BUKRS = P_BUKRS
+                              AND SAKNR = P_RACCT.
+  IF SY-SUBRC NE 0.
+    SET CURSOR FIELD 'P_RACCT'.
+    MESSAGE E999 WITH 'Selldown a/c' P_RACCT 'not defined for co.'
+                      P_BUKRS.
+  ENDIF.
+*  Company
+  SELECT SINGLE * FROM T001 WHERE BUKRS = P_BUKRS.
+  IF SY-SUBRC NE 0.
+    SET CURSOR FIELD 'P_BUKRS'.
+    MESSAGE E999 WITH 'Company code' P_BUKRS 'not defined.'.
+  ENDIF.
+*  Period 1-16
+* if p_rpmax < 1 or p_rpmax > 16.
+*   message e999 with 'Period range must be within 1-16.'.
+* endif.
+*  Document type
+  IF P_BLART = SPACE.
+    SET CURSOR FIELD 'P_BLART'.
+    MESSAGE E999 WITH 'Document type must be given.'.
+  ENDIF.
+  SELECT SINGLE * FROM T003 WHERE BLART = P_BLART.
+  IF SY-SUBRC NE 0.
+    SET CURSOR FIELD 'P_BLART'.
+    MESSAGE E999 WITH 'Document type' P_BLART 'not defined in T003.'.
+  ENDIF.
+*  Cost Centre
+  IF P_KOSTL = SPACE.
+    SET CURSOR FIELD 'P_KOSTL'.
+    MESSAGE E999 WITH 'Treasury cost centre must be entered.'.
+  ENDIF.
+  SELECT * FROM CSKS WHERE KOSTL = P_KOSTL
+                       AND DATAB LE SY-DATUM
+                       AND DATBI GE SY-DATUM
+                       AND BUKRS = P_BUKRS.
+    EXIT.
+  ENDSELECT.
