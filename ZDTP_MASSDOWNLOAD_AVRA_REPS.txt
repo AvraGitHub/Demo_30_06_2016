@@ -2642,5 +2642,115 @@ data: altCustomerNameRange type string.
   endif.
 endform.                                                                        "findAllClassesForAuthor
 
+*-------------------------------------------------------------------------------------------------------
+*  findClassesByWildcard...  Find classes using a wildcard search
+*-------------------------------------------------------------------------------------------------------
+form findClassesByWildcard using iLocClass like iClasses[]
+                                 rangeClass like soClassName[]
+                                 value(rangeAuthor) like soAuthor[]
+                                 value(custNameRange)
+                                 value(customerClassesOnly)
+                                 value(language).
+
+data: altCustomerNameRange type string.
+
+  if customerClassesOnly is initial.
+*   Searching for customer and SAP classes
+    if custNameRange <> '^'.
+*     build up the customer name range used for select statements
+      concatenate custNameRange '%' into altCustomerNameRange.
+
+      select clsname descript msg_id
+             from vseoclass
+             appending corresponding fields of table ilocClass
+             where clsname in rangeClass
+               and clsname like custNameRange
+               and langu = language
+               and ( author in rangeAuthor or changedby in rangeAuthor )
+               and version = '1'
+               and ( state = '0' or state = '1' ).
+      if sy-subrc <> 0.
+        select clsname descript msg_id
+               from vseoclass
+               appending corresponding fields of table ilocClass
+               where clsname in rangeClass
+                 and clsname like custNameRange
+                 and langu = language
+                 and ( author in rangeAuthor or changedby in rangeAuthor )
+                 and version = '0'
+                 and ( state = '0' or state = '1' ).
+      endif.
+    else.
+*     Searching using normal name ranges
+      select clsname descript msg_id
+             from vseoclass
+             appending corresponding fields of table ilocClass
+             where clsname in rangeClass
+               and langu = language
+               and ( author in rangeAuthor or changedby in rangeAuthor )
+               and version = '1'
+               and ( state = '0' or state = '1' ).
+      if sy-subrc <> 0.
+        select clsname descript msg_id
+               from vseoclass
+               appending corresponding fields of table ilocClass
+               where clsname in rangeClass
+                 and langu = language
+                 and ( author in rangeAuthor or changedby in rangeAuthor )
+                 and version = '0'
+                 and ( state = '0' or state = '1' ).
+      endif.
+    endif.
+  else.
+*   searching for only customer classes
+    if custNameRange <> '^'.
+*     build up the customer name range used for select statements
+      concatenate custNameRange '%' into altCustomerNameRange.
+
+      select clsname descript msg_id
+             from vseoclass
+             appending corresponding fields of table ilocClass
+             where clsname in rangeClass
+               and clsname like custNameRange
+               and langu = language
+               and ( clsname like 'ZC%' or clsname like 'YC%' )
+               and ( author in rangeAuthor or changedby in rangeAuthor )
+               and version = '1'
+               and ( state = '0' or state = '1' ).
+      if sy-subrc <> 0.
+        select clsname descript msg_id
+               from vseoclass
+               appending corresponding fields of table ilocClass
+               where clsname in rangeClass
+                 and langu = language
+                 and ( clsname like 'ZC%' or clsname like 'YC%' )
+                 and ( author in rangeAuthor or changedby in rangeAuthor )
+                 and version = '0'
+                 and ( state = '0' or state = '1' ).
+      endif.
+    else.
+*     Searching using normal name ranges
+      select clsname descript msg_id
+             from vseoclass
+             appending corresponding fields of table ilocClass
+             where clsname in rangeClass
+               and ( clsname like 'ZC%' or clsname like 'YC%' )
+               and ( author in rangeAuthor or changedby in rangeAuthor )
+               and version = '1'
+               and ( state = '0' or state = '1' ).
+      if sy-subrc <> 0.
+        select clsname descript msg_id
+               from vseoclass
+               appending corresponding fields of table ilocClass
+               where clsname in rangeClass
+                 and ( clsname like 'ZC%' or clsname like 'YC%' )
+                 and ( author in rangeAuthor or changedby in rangeAuthor )
+                 and version = '0'
+                 and ( state = '0' or state = '1' ).
+      endif.
+    endif.
+  endif.
+endform.                                                                          "findClassesByWildcard
+
 
 
