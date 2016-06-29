@@ -1,0 +1,86 @@
+*&---------------------------------------------------------------------*
+*& Report  ZREADTEXT
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  ZREADTEXT.
+
+
+*&---------------------------------------------------------------------*
+*& archive read program for sales activites and their SAP Script texts *
+*&                                                                     *
+*&---------------------------------------------------------------------*
+
+
+PARAMETERS: ausgtext AS CHECKBOX.
+
+DATA: gt_vbka TYPE TABLE OF vbka,
+      gt_vbfa TYPE TABLE OF vbfa,
+      gt_vbpa TYPE TABLE OF vbpa.
+DATA: gv_ar_handle TYPE sy-tabix.
+
+
+
+CALL FUNCTION 'ARCHIVE_OPEN_FOR_READ'
+  EXPORTING
+    object             = 'SD_VBKA'
+  IMPORTING
+    archive_handle     = gv_ar_handle
+  EXCEPTIONS
+    no_files_available = 1
+    not_authorized     = 7.
+IF sy-subrc <> 0.
+  MESSAGE ID sy-msgid TYPE 'I' NUMBER sy-msgno
+          WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  STOP.
+ENDIF.
+
+
+DO.
+
+  CALL FUNCTION 'ARCHIVE_GET_NEXT_OBJECT'
+    EXPORTING
+      archive_handle = gv_ar_handle
+    EXCEPTIONS
+      end_of_file    = 1.
+  IF sy-subrc <> 0.
+    EXIT.
+  ENDIF.
+
+  CALL FUNCTION 'ARCHIVE_GET_TABLE'
+    EXPORTING
+      archive_handle        = gv_ar_handle
+      record_structure      = 'VBKA'
+      all_records_of_object = 'X'
+    TABLES
+      table                 = gt_vbka
+    EXCEPTIONS
+      end_of_object         = 0.
+
+  CALL FUNCTION 'ARCHIVE_GET_TABLE'
+    EXPORTING
+      archive_handle        = gv_ar_handle
+      record_structure      = 'VBFA'
+      all_records_of_object = 'X'
+    TABLES
+      table                 = gt_vbfa
+    EXCEPTIONS
+      end_of_object         = 0.
+
+  CALL FUNCTION 'ARCHIVE_GET_TABLE'
+    EXPORTING
+      archive_handle        = gv_ar_handle
+      record_structure      = 'VBPA'
+      all_records_of_object = 'X'
+    TABLES
+      table                 = gt_vbpa
+    EXCEPTIONS
+      end_of_object         = 0.
+
+
+  PERFORM output_doc_info.
+
+ENDDO.
