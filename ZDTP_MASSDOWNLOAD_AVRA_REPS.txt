@@ -1080,4 +1080,159 @@ field-symbols: <waDictStruct> type tDictTable.
 endform.
 
 
+*----------------------------------------------------------------------------------------------------------------------
+*  checkComboBoxes...  Check input parameters
+*----------------------------------------------------------------------------------------------------------------------
+form checkComboBoxes.
+
+  if pAuth is initial.
+    if soPack[] is initial.
+      case 'X'.
+        when rTable.
+          if soTable[] is initial.
+            statusBarMessage = 'You must enter either a table name or author.'.
+          endif.
+        when rFunc.
+          if ( soFName[] is initial ) and ( soFGroup[] is initial ).
+            if soFName[] is initial.
+              statusBarMessage = 'You must enter either a function name or author.'.
+            else.
+              if soFGroup[] is initial.
+                statusBarMessage = 'You must enter either a function group, or an author name.'.
+              endif.
+            endif.
+          endif.
+        when rProg.
+          if soProg[] is initial.
+              statusBarMessage = 'You must enter either a program name or author name.'.
+          endif.
+      endcase.
+    endif.
+  else.
+*   Check the user name of the person objects are to be downloaded for
+    if pAuth = 'SAP*' or pauth = 'SAP'.
+      statusBarMessage = 'Sorry cannot download all objects for SAP standard user'.
+    endif.
+  endif.
+
+  if not statusBarMessage is initial.
+    perform displayStatus using statusBarMessage 3.
+    forcedExit = 1.
+    stop.
+  endif.
+endform.                                                                                "checkComboBoxes
+
+*----------------------------------------------------------------------------------------------------------------------
+* fillSelectionRanges...      for selection routines
+*----------------------------------------------------------------------------------------------------------------------
+form fillSelectionRanges.
+
+data: strLength type i.
+
+  strLength = strlen( pcName ).
+
+  if not pAuth is initial.
+    soAuthor-sign = 'I'.
+    soAuthor-option = 'EQ'.
+    soAuthor-low = pAuth.
+    append soAuthor.
+  endif.
+
+* Tables
+  if not soTable is initial.
+    soTableNames[] = soTable[].
+*   Add in the customer namespace if we need to
+    if not pcName is initial.
+       loop at soTableNames.
+        if soTableNames-low+0(strLength) <> pcName.
+          concatenate pcName soTableNames-low into soTableNames-low.
+        endif.
+
+        if soTableNames-high+0(strLength) <> pcName.
+          concatenate pcName soTableNames-high into soTableNames-high.
+        endif.
+
+        modify soTableNames.
+      endloop.
+    endif.
+  endif.
+
+* Function names
+  if not soFName is initial.
+    soFunctionName[] = soFname[].
+*   Add in the customer namespace if we need to
+    if not pcName is initial.
+       loop at soFunctionName.
+        if soFunctionName-low+0(strLength) <> pcName.
+          concatenate pcName soFunctionName-low into soFunctionName-low.
+        endif.
+
+        if soFunctionName-high+0(strLength) <> pcName.
+          concatenate pcName soFunctionName-high into soFunctionName-high.
+        endif.
+
+        modify soFunctionName.
+      endloop.
+    endif.
+  endif.
+
+* Function group
+  if not soFGroup is initial.
+    soFunctionGroup[] = soFGroup[].
+*   Add in the customer namespace if we need to
+    if not pcName is initial.
+       loop at soFunctionName.
+        if soFunctionGroup-low+0(strLength) <> pcName.
+          concatenate pcName soFunctionGroup-low into soFunctionGroup-low.
+        endif.
+
+        if soFunctionGroup-high+0(strLength) <> pcName.
+          concatenate pcName soFunctionGroup-high into soFunctionGroup-high.
+        endif.
+
+        modify soFunctionGroup.
+      endloop.
+    endif.
+  endif.
+
+* Class names
+  if not soClass is initial.
+    soClassName[] = soClass[].
+*   Add in the customer namespace if we need to
+    if not pcName is initial.
+       loop at soClassName.
+        if soClassName-low+0(strLength) <> pcName.
+          concatenate pcName soClassName-low into soClassName-low.
+        endif.
+
+        if soClassName-high+0(strLength) <> pcName.
+          concatenate pcName soClassName-high into soClassName-high.
+        endif.
+
+        modify soClassName.
+      endloop.
+    endif.
+  endif.
+
+* Program names
+  if not soProg is initial.
+    soProgramName[] = soProg[].
+*   Add in the customer namespace if we need to
+    if not pcName is initial.
+       loop at soProgramName.
+        if soProgramName-low+0(strLength) <> pcName.
+          concatenate pcName soProgramName-low into soProgramName-low.
+        endif.
+
+        if soProgramName-high+0(strLength) <> pcName.
+          concatenate pcName soProgramName-high into soProgramName-high.
+        endif.
+
+        modify soProgramName.
+      endloop.
+    endif.
+  endif.
+endform.                                                                                          " fillSelectionRanges
+
+
 
