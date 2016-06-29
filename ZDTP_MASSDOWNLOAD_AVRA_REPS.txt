@@ -2884,4 +2884,53 @@ data: classCurrentLines type i value 0.
   endif.
 endform.                                                                   "scanForAdditionalClassStuff
 
+*-------------------------------------------------------------------------------------------------------
+*  findClassDetails...
+*-------------------------------------------------------------------------------------------------------
+form findClassDetails using value(className)
+                                  waClass type tClass
+                                  iLocFunctions like iFunctions[]
+                                  value(getTextElements)
+                                  value(getMessages)
+                                  value(getFunctions)
+                                  value(getCustDictStructures)
+                                  value(customerOnly)
+                                  value(customerNameRange).
+
+data: iEmptySelectionTexts type standard table of tTextTable.
+data: myTabix type syTabix.
+data: waMethod type tMethod.
+data: rnBlankAuthor like soAuthor[].
+data: rnBlankPackage like soPack[].
+data: waInterface type tInterface.
+
+* Build up the keys we will use for finding data
+  perform buildClassKeys using waClass.
+
+  if waClass-descript is initial.
+    perform findClassDescription using className
+                                       waClass-descript.
+  endif.
+
+* Find the class attributes.
+  select single exposure msg_id state clsfinal r3release
+                from vseoclass
+                into (waClass-exposure, waClass-msg_id, waClass-state,
+                      waClass-clsfinal, waClass-r3release)
+                where clsName = waClass-clsName.
+
+* Don't try and find any other details for an exception class
+  if ( waClass-clsName cs 'ZCX_' or waClass-clsName cs 'CX_'  ).
+*   Exception texts
+    perform findExceptionTexts using waClass-publicClassKey
+                                     waClass-iConcepts[].
+    waClass-scanned = 'X'.
+  else.
+    if not getTextElements is initial.
+*     Find the class texts from out of the database.
+      perform retrieveProgramTexts using iEmptySelectionTexts[]
+                                         waClass-iTextElements[]
+                                         waClass-textElementKey.
+    endif.
+
 
