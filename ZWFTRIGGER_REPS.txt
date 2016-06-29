@@ -1,0 +1,65 @@
+*&---------------------------------------------------------------------*
+*& Report  ZWFTRIGGER
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  ZWFTRIGGER.
+REPORT Z00START .
+
+INCLUDE <CNTN01>. " definition of container and object macros
+
+PARAMETERS: OBJKEY LIKE MARA-MATNR DEFAULT '200-100'.
+
+DATA: TASK   LIKE SWWVPUBLIC-WI_RH_TASK VALUE 'WS96000011',
+      WI_ID  LIKE SWWVPUBLIC-WI_ID,
+      OBJECT TYPE SWC_OBJECT.
+DATA: AGENTS       LIKE SWHACTOR OCCURS 0 WITH HEADER LINE,
+      WI_CONTAINER LIKE SWCONT   OCCURS 0 WITH HEADER LINE.
+
+* set the import parameter for flow Z00MSIPROC1
+* first: create object reference (runtime handle)
+  SWC_CREATE_OBJECT OBJECT 'Z00MARA' OBJKEY.
+* second: write reference to work item container using parameter def
+  SWC_SET_ELEMENT WI_CONTAINER 'MaterialMaster' OBJECT.
+* third: convert references in container from runtime handle to
+*   persistent object reference
+  SWC_CONTAINER_TO_PERSISTENT WI_CONTAINER.
+
+* start the workflow via the function API
+CALL FUNCTION 'SWW_WI_START_SIMPLE'
+     EXPORTING
+*         CREATOR                      = ' '
+*         PRIORITY                     = NO_PRIO
+          TASK                         = TASK
+*         CALLED_IN_BACKGROUND         = ' '
+*         DEADLINE_DATA                = ' '
+     IMPORTING
+          WI_ID                        = WI_ID
+*         wi_header                    =
+*         RETURN                       =
+*         WI_RESULT                    =
+     TABLES
+          AGENTS                       = AGENTS " not needed here
+*         DEADLINE_AGENTS              =
+*         DESIRED_END_AGENTS           =
+*         LATEST_START_AGENTS          =
+*         EXCLUDED_AGENTS              =
+*         NOTIFICATION_AGENTS          =
+*         SECONDARY_METHODS            =
+          WI_CONTAINER                 = WI_CONTAINER
+     EXCEPTIONS
+          ID_NOT_CREATED               = 1
+          READ_FAILED                  = 2
+          IMMEDIATE_START_NOT_POSSIBLE = 3
+          EXECUTION_FAILED             = 4
+          INVALID_STATUS               = 5
+          OTHERS                       = 6.
+IF SY-SUBRC NE 0.                      " error message
+  MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+  WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+ELSE.                                  " success message
+  MESSAGE ID 'WZ' TYPE 'S' NUMBER '703' WITH WI_ID.
+ENDIF.
