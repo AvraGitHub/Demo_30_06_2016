@@ -2161,4 +2161,155 @@ data: myTabix type syTabix.
 endform.                                                                     "scanForAdditionalProgStuff
 
 
+*-------------------------------------------------------------------------------------------------------
+*  findProgramDetails...
+*-------------------------------------------------------------------------------------------------------
+form findProgramDetails using value(programName)
+                              value(programType)
+                                    programTitle
+                                    waProgram type tProgram
+                              value(getTextElements)
+                              value(getMessages)
+                              value(getScreens)
+                              value(getCustDictStructures)
+                              value(customerOnly)
+                              value(customerNameRange).
+
+  perform findProgramOrIncludeTitle using programName
+                                          programTitle.
+
+  if not getTextElements is initial.
+*   Find the program texts from out of the database.
+    perform retrieveProgramTexts using waProgram-iSelectionTexts[]
+                                       waProgram-iTextElements[]
+                                       programName.
+  endif.
+
+* Search for any GUI texts
+  if not getScreens is initial and ( programType = 'M' or programType = '1' ).
+    perform retrieveGUITitles using waProgram-iGUITitle[]
+                                    programName.
+  endif.
+
+* Find individual messages
+  if not getMessages is initial.
+    if programType = 'M' or programType = '1'.
+      perform findMainMessageClass using programName
+                                         waProgram-messageClass.
+    endif.
+
+    perform scanForMessages using programName
+                                  waProgram-messageClass
+                                  waProgram-iMessages[].
+  endif.
+
+  if not getCustDictStructures is initial.
+    perform scanForTables using programName
+                                customerOnly
+                                customerNameRange
+                                waProgram-iDictStruct[].
+
+    perform scanForLikeOrType using programName
+                                    customerOnly
+                                    customerNameRange
+                                    waProgram-iDictStruct[].
+  endif.
+endform.                                                                             "findProgramDetails
+
+*-------------------------------------------------------------------------------------------------------
+*  findAllProgramsForAuthor...
+*-------------------------------------------------------------------------------------------------------
+form findAllProgramsForAuthor using iLocProgram like iPrograms[]
+                                    rangeProgram like soProgramName[]
+                                    rangeAuthor like soAuthor[]
+                                    value(custNameRange)
+                                    value(alsoModifiedByauthor)
+                                    value(customerProgsOnly)
+                                    value(soLocPackage) like soPack[].
+
+data: altCustomerNameRange type string.
+field-symbols: <waProgram> type tProgram.
+data: genFlag type genFlag.
+
+* build up the customer name range used for select statements
+  concatenate custNameRange '%' into altCustomerNameRange.
+
+* select by name and author
+  if not alsoModifiedByAuthor is initial.
+*   Programs modified by author
+*   Program to search for is an executable program
+    if customerProgsOnly is initial.
+*     Select all programs
+      select a~progname
+             a~subc
+             appending corresponding fields of table ilocProgram
+             from reposrc as a
+             inner join tadir as b
+               on a~progname = b~obj_name
+             where a~progname in rangeProgram
+               and a~cnam in rangeAuthor
+               and ( a~subc = '1' or a~subc = 'M' or a~subc = 'S' )
+               and b~pgmid = 'R3TR'
+               and b~object = 'PROG'
+               and b~devclass in soLocPackage.
+
+    else.
+*     Select only customer specific programs
+      select progname
+             subc
+             appending corresponding fields of table iLocProgram
+             from reposrc as a
+             inner join tadir as b
+               on a~progname = b~obj_name
+             where a~progname  in rangeProgram
+               and ( a~progname like altCustomerNameRange
+                     or a~progname like 'Z%'
+                     or a~progname like 'Y%'
+                     or a~progname like 'SAPMZ%'
+                     or a~progname like 'SAPMY%')
+               and a~cnam in rangeAuthor
+               and ( a~subc = '1' or a~subc = 'M' or a~subc = 'S' )
+               and b~pgmid = 'R3TR'
+               and b~object = 'PROG'
+               and b~devclass in soLocPackage.
+    endif.
+  else.
+
+*   Programs created by author
+    if customerProgsOnly is initial.
+*     Select all programs
+      select progname
+             subc
+             appending corresponding fields of table iLocProgram
+             from reposrc as a
+             inner join tadir as b
+               on a~progname = b~obj_name
+             where a~progname in rangeProgram
+               and ( a~subc = '1' or a~subc = 'M' or a~subc = 'S' )
+               and ( a~cnam in rangeAuthor or a~unam in rangeAuthor )
+               and b~pgmid = 'R3TR'
+               and b~object = 'PROG'
+               and b~devclass in soLocPackage.
+    else.
+*     Select only customer specific programs
+      select a~progname
+             a~subc
+             appending corresponding fields of table iLocProgram
+             from reposrc as a
+             inner join tadir as b
+               on a~progname = b~obj_name
+             where a~progname in rangeProgram
+               and ( a~progname like altCustomerNameRange
+                     or a~progname like 'Z%'
+                     or a~progname like 'Y%'
+                     or a~progname like 'SAPMZ%'
+                     or a~progname like 'SAPMY%')
+               and ( a~subc = '1' or a~subc = 'M' or a~subc = 'S' )
+               and ( a~cnam in rangeAuthor or a~unam in rangeAuthor )
+               and b~pgmid = 'R3TR'
+               and b~object = 'PROG'
+               and b~devclass in soLocPackage.
+    endif.
+  endif.
+endform.                                                                       "findAllProgramsForAuthor
 
