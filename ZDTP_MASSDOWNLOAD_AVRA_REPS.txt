@@ -1695,5 +1695,117 @@ data: exceptionCustomerNameRange type string.
         endif.
       endif.
 
+      if sy-subrc = 0.
+        try.
+          if head+0(1) = 'Y' or head+0(1) = 'Z' or head cs customerNameRange.
+*           We have found a class best append it to our class table if we do not already have it.
+            read table iLocClasses into waSearchClass with key clsName = head.
+            if sy-subrc <> 0.
+              if head+0(3) = 'CX_'
+                 or head+0(4) = 'ZCX_'
+                 or head+0(4) = 'YCX_'
+                 or head cs exceptionCustomerNameRange.
+
+                waClass-exceptionClass = TRUE.
+              endif.
+
+              waClass-clsname = head.
+
+*             Check the package
+              if not soLocPackage[] is initial.
+                select single obj_name
+                       from tadir
+                       into waClass-clsName
+                       where pgmid = 'R3TR'
+                         and object = 'CLAS'
+                         and obj_name = waClass-clsName
+                         and devclass in soLocPackage[].
+                if sy-subrc = 0.
+                  append waClass to iLocClasses.
+                endif.
+              else.
+                append waClass to iLocClasses.
+              endif.
+            endif.
+          endif.
+          catch cx_sy_range_out_of_bounds.
+        endtry.
+      endif.
+    endif.
+  endloop.
+endform.                                                                                                "scanForClasses
+
+*----------------------------------------------------------------------------------------------------------------------
+* scanForIncludePrograms... Search each program for include programs
+*----------------------------------------------------------------------------------------------------------------------
+form scanForIncludePrograms using value(programName)
+                                  value(recursiveIncludes)
+                                  value(customerOnly)
+                                  value(customerNameRange)
+                                        iLocIncludes like dumiIncludes[].
+
+data: iIncludeLines type standard table of string with header line.
+data: iTokens type standard table of stokes with header line.
+data: iKeywords type standard table of text20 with header line.
+data: iStatements type standard table of sstmnt with header line.
+data: waTokens type stokes.
+data: waInclude type tInclude.
+data: waIncludeExists type tInclude.
+data: maxLines type i.
+data: nextLine type i.
+data: castProgramName type program.
+
+* Read the program code from the textpool.
+  castProgramName = programName.
+  read report castProgramName into iIncludeLines.
+
+  append INCLUDE to iKeywords.
+  scan abap-source iIncludeLines tokens into iTokens with includes statements into iStatements keywords from iKeywords.
+
+  clear iIncludeLines[].
+
+  maxLines = lines( iTokens ).
+  loop at iTokens where str = INCLUDE and type = 'I'.
+     nextLine = sy-tabix + 1.
+     if nextLine <= maxLines.
+       read table iTokens index nextLine into waTokens.
+
+*      Are we only to find customer includes?
+       if not customerOnly is initial.
+         try.
+           if waTokens-str+0(1) = 'Y' or waTokens-str+0(1) = 'Z' or waTokens-str cs customerNameRange
+              or waTokens-str+0(2) = 'MZ' or waTokens-str+0(2) = 'MY'.
+
+           else.
+             continue.
+           endif.
+           catch cx_sy_range_out_of_bounds into objRuntimeError.
+         endtry.
+       endif.
+
+       waInclude-includeName = waTokens-str.
+
+*      Best find the program title text as well.
+       perform findProgramOrIncludeTitle using waInclude-includeName
+                                               waInclude-includeTitle.
+
+*      Don't append the include if we already have it listed
+       read table iLocIncludes into waIncludeExists with key includeName = waInclude-includeName.
+       if sy-subrc <> 0.
+         append waInclude to iLocIncludes.
+
+         if not recursiveIncludes is initial.
+*          Do a recursive search for other includes
+           perform scanForIncludePrograms using waInclude-includeName
+                                                recursiveIncludes
+                                                customerOnly
+                                                customerNameRange
+                                                iLocIncludes[].
+         endif.
+       endif.
+     endif.
+   endloop.
+endform.                                                                                        "scanForIncludePrograms
+
 
 
