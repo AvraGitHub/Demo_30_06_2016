@@ -134,3 +134,136 @@ ls_order_header_in-doc_type   = 'TA'.
         lt_items_inx-SHIP_POINT = 'X'.
         lt_items_in-PLANT = 'ASP1'.
         lt_items_inx-PLANT = 'X'.
+
+         append lt_items_in.
+         append lt_items_inx.
+*  lt_items_in-itm_number = '100'.
+*  lt_items_inx-itm_number = '100'.
+*
+*
+*  lt_items_in-material = 'RACKET'.
+*  lt_items_inx-material = 'X'.
+*
+*  lt_items_in-comp_quant = '450'.
+*  lt_items_inx-comp_quant = 'X'.
+*
+*  lt_items_in-NET_WEIGHT = '450'.
+*  lt_items_inx-NET_WEIGHT = 'X'.
+*  lt_items_in-GROSS_WGHT = '500'.
+*  lt_items_inx-GROSS_WGHT = 'X'.
+*  lt_items_in-UNTOF_WGHT = 'KG'.
+*  lt_items_inx-UNTOF_WGHT = 'X'.
+*  lt_items_in-VOLUME = '10'.
+*  lt_items_inx-VOLUME = 'X'.
+*   lt_items_in-VOLUNIT = 'M3'.
+*  lt_items_inx-VOLUNIT = 'X'.
+*  lt_items_in-SHIP_POINT = 'ASSP'.
+*  lt_items_inx-SHIP_POINT = 'X'.
+*  lt_items_in-PLANT = 'ASP1'.
+*  lt_items_inx-PLANT = 'X'.
+*
+*  APPEND lt_items_in." TO li_order_items_in.
+*
+*  lt_items_inx-updateflag = 'I'.
+*  APPEND lt_items_inx." TO li_order_items_inx.
+
+  " dates
+*  lt_schedules_in-ITM_NUMBER = '100'.
+*  lt_schedules_inX-ITM_NUMBER = 'X'.
+*
+* lt_SCHEDULES_IN-TP_DATE = '20141231'.
+*  lT_SCHEDULES_INX-TP_DATE = 'X'.
+*  lT_SCHEDULES_IN-MS_DATE = '20150102'.
+*  lT_SCHEDULES_INX-MS_DATE = 'X'.
+*  lT_SCHEDULES_IN-LOAD_DATE = '20150104'.
+*  lT_SCHEDULES_INX-LOAD_DATE = 'X'.
+*  lT_SCHEDULES_IN-GI_DATE = '20150105'.
+*  lT_SCHEDULES_INX-GI_DATE = 'X'.
+*  lT_SCHEDULES_IN-DLV_DATE = '20150106'.
+*  lT_SCHEDULES_INX-DLV_DATE = 'X'.
+*
+*APPEND lt_schedules_in." TO li_ORDER_SCHEDULES_IN.
+*
+*  lt_schedules_inX-updateflag = 'I'.
+*  APPEND lt_schedules_inX." TO li_ORDER_SCHEDULES_INX.
+
+ lT_SCHEDULES_INX-updateflag = 'I'.
+
+       lt_schedules_in-itm_number  = '000010'.
+       lt_schedules_inx-itm_number  = '000010'.
+       lt_schedules_in-sched_line  = '0001'.
+       lt_schedules_inx-sched_line  = '0001'.
+       lt_schedules_in-req_qty     = 1000.
+       lt_schedules_inx-req_qty     = 'X'.
+*       lt_schedules_in-req_date    = sy-datum.
+*       lt_schedules_inx-req_date     = 'X'.
+       lt_SCHEDULES_IN-TP_DATE = '20141231'.
+       lT_SCHEDULES_INX-TP_DATE = 'X'.
+       lT_SCHEDULES_IN-MS_DATE = '20150102'.
+       lT_SCHEDULES_INX-MS_DATE = 'X'.
+       lT_SCHEDULES_IN-LOAD_DATE = '20150104'.
+       lT_SCHEDULES_INX-LOAD_DATE = 'X'.
+       lT_SCHEDULES_IN-GI_DATE = '20150105'.
+       lT_SCHEDULES_INX-GI_DATE = 'X'.
+       lT_SCHEDULES_IN-DLV_DATE = '20150106'.
+       lT_SCHEDULES_INX-DLV_DATE = 'X'.
+
+       append lt_schedules_in.
+       append lt_schedules_inx.
+*------------------------------------------------------------------
+* CALL Bapi
+*------------------------------------------------------------------
+
+  CALL FUNCTION 'BAPI_SALESORDER_CREATEFROMDAT2'
+       EXPORTING
+            order_header_in  = ls_order_header_in
+            order_header_inx = ls_order_header_inx
+            "testrun          = 'X'
+       IMPORTING
+            salesdocument    = l_vbeln
+       TABLES
+             return                        = lt_return
+            order_items_in                = lt_items_in
+            order_items_inx               = lt_items_inx
+            order_partners                = lt_partners
+            order_schedules_in            = lt_schedules_in
+            order_schedules_inx           = lt_schedules_inx.
+
+*------------------------------------------------------------------
+* Check and write Return table
+*------------------------------------------------------------------
+
+
+
+
+ CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+     EXPORTING
+       WAIT          = 'X'.
+
+  LOOP AT lt_return INTO l_return.
+    WRITE: / l_return-type, l_return-message(50).
+    IF l_return-type = 'E'.
+      l_errflag = 'X'.
+    ENDIF.
+  ENDLOOP.
+
+ WRITE: / 'Sales dcoument: ', l_vbeln.
+    " IMPORTING
+      " RETURN        = RETURN.
+
+  "if sy-subrc = 0
+  "and not salesdoc is initial.
+*  IF return-type NA 'EA'.
+*    CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+*     EXPORTING
+*       WAIT          = 'X'
+*     IMPORTING
+*       RETURN        = RETURN.
+*   ENDIF.
+*------------------------------------------------------------------
+* No errors - Commit
+*------------------------------------------------------------------
+
+*  IF l_errflag  IS INITIAL.
+*    CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'.
+*  ENDIF.
