@@ -2520,5 +2520,127 @@ data: waClass like line of iLocCLasses[].
                                               soLocPackage[].
   endif.
 endform.                                                                                "retrieveClasses
+*-------------------------------------------------------------------------------------------------------
+*  findAllClassesForAuthor...
+*-------------------------------------------------------------------------------------------------------
+form findAllClassesForAuthor using iLocClass like iClasses[]
+                                   rangeClass like soClassName[]
+                                   rangeAuthor like soAuthor[]
+                                   value(custNameRange)
+                                   value(alsoModifiedByauthor)
+                                   value(customerClassesOnly)
+                                   value(language).
+
+data: altCustomerNameRange type string.
+
+* build up the customer name range used for select statements
+  concatenate custNameRange '%' into altCustomerNameRange.
+
+* select by name and author
+  if not alsoModifiedByAuthor is initial.
+*   Classes modified by author
+    if customerClassesOnly is initial.
+*     Select all classes
+      select clsname descript msg_id
+             from vseoclass
+             appending corresponding fields of table ilocClass
+             where clsname in rangeClass
+               and langu = language
+               and ( author in rangeAuthor or changedby in rangeAuthor )
+               and version = '1'
+               and ( state = '0' or state = '1' ).
+
+      if sy-subrc <> 0.
+        select clsname descript msg_id
+               from vseoclass
+               appending corresponding fields of table ilocClass
+               where clsname in rangeClass
+               and langu = language
+                 and ( author in rangeAuthor or changedby in rangeAuthor )
+                 and version = '0'
+                 and ( state = '0' or state = '1' ).
+      endif.
+    else.
+*     Select only customer specific classes
+      select clsname descript msg_id
+             from vseoclass
+             appending corresponding fields of table ilocClass
+             where clsname in rangeClass
+               and ( clsname like altCustomerNameRange
+                     or clsname like 'Z%'
+                     or clsname like 'Y%')
+               and langu = language
+               and ( author in rangeAuthor or changedby in rangeAuthor )
+               and version = '1'
+               and ( state = '0' or state = '1' ).
+
+      if sy-subrc <> 0.
+        select clsname descript msg_id
+               from vseoclass
+               appending corresponding fields of table ilocClass
+               where clsname in rangeClass
+                 and ( clsname like altCustomerNameRange
+                       or clsname like 'Z%'
+                       or clsname like 'Y%')
+                 and langu = language
+                 and ( author in rangeAuthor or changedby in rangeAuthor )
+                 and version = '0'
+                 and ( state = '0' or state = '1' ).
+      endif.
+    endif.
+  else.
+*   Programs created by author
+    if customerClassesOnly is initial.
+*     Select all classes
+      select clsname descript msg_id
+             from vseoclass
+             appending corresponding fields of table ilocClass
+             where clsname in rangeClass
+               and langu = language
+               and author in rangeAuthor
+               and version = '1'
+               and ( state = '0' or state = '1' ).
+
+      if sy-subrc <> 0.
+        select clsname descript msg_id
+               from vseoclass
+               appending corresponding fields of table ilocClass
+               where clsname in rangeClass
+                 and langu = language
+                 and author in rangeAuthor
+                 and version = '0'
+                 and ( state = '0' or state = '1' ).
+      endif.
+    else.
+*     Select only customer specific classes
+      select clsname descript msg_id
+             from vseoclass
+             appending corresponding fields of table ilocClass
+             where clsname in rangeClass
+               and ( clsname like altCustomerNameRange
+                     or clsname like 'Z%'
+                     or clsname like 'Y%')
+               and langu = language
+               and author in rangeAuthor
+               and version = '1'
+               and ( state = '0' or state = '1' ).
+
+      if sy-subrc <> 0.
+        select clsname descript msg_id
+               from vseoclass
+               appending corresponding fields of table ilocClass
+               where clsname in rangeClass
+                 and ( clsname like altCustomerNameRange
+                       or clsname like 'Z%'
+                       or clsname like 'Y%')
+                 and langu = language
+                 and author in rangeAuthor
+                 and version = '0'
+                 and ( state = '0' or state = '1' ).
+      endif.
+    endif.
+  endif.
+endform.                                                                        "findAllClassesForAuthor
+
 
 
