@@ -90,3 +90,61 @@ DATA : BEGIN OF D_SCREEN,
 DATA: BEGIN OF I_BDCDATA OCCURS 0.
         INCLUDE STRUCTURE BDCDATA.
 DATA: END OF I_BDCDATA.
+
+* ZZ001A recs.selected
+DATA: BEGIN OF I_ZZ001A OCCURS 0.
+        INCLUDE STRUCTURE ZZ001A.
+DATA: END OF I_ZZ001A.
+
+* totalled foreign currencies
+DATA: BEGIN OF I_BALS OCCURS 0,
+        RACCT     LIKE GLT0-RACCT,   "account
+        KOSTL     LIKE CSKS-KOSTL,   "cost centre
+        RTCUR     LIKE GLT0-RTCUR,   "currency
+        DRCRK     LIKE GLT0-DRCRK,   "debit/credit S/H
+        TSL       LIKE ZZ001A-TSL,   "trans.amount
+        HSL       LIKE ZZ001A-HSL,   "local amount
+      END OF I_BALS.
+
+* account text
+DATA: BEGIN OF I_ACTXT OCCURS 50,
+        RACCT    LIKE GLT0-RACCT,  "account code
+        TXT      LIKE SKAT-TXT20,  "account text
+      END OF I_ACTXT.
+
+***********************************************************************
+* Field Symbols                                                       *
+***********************************************************************
+FIELD-SYMBOLS: <FIELD>.    "for getting documentation key
+
+***********************************************************************
+* Parameters definition                                               *
+***********************************************************************
+* data selection
+SELECTION-SCREEN BEGIN OF BLOCK SELECT WITH FRAME TITLE TEXT-001.
+  PARAMETERS:     P_RLDNR  LIKE T881-RLDNR MEMORY ID RLD  "ledger
+                           OBLIGATORY,
+                  P_RVERS  LIKE GLT0-RVERS MEMORY ID VER  "version
+                           OBLIGATORY,
+                  P_RRCTY  LIKE GLT0-RRCTY MEMORY ID RTY  "rec.type
+                           OBLIGATORY,
+                  P_BUKRS  LIKE T001-BUKRS MEMORY ID BUK. "company
+  SELECT-OPTIONS: S_BUDAT  FOR  BKPF-BUDAT,               "posting date
+                  S_CPUDT  FOR  BKPF-CPUDT,               "doc.date
+                  S_BELNR  FOR  BKPF-BELNR MEMORY ID BEL, "doc.number
+                  S_RACCT  FOR  GLT0-RACCT MEMORY ID ACT, "accounts
+                  S_KOSTL  FOR  BSEG-KOSTL MEMORY ID KST. "cost centre
+* parameters:     p_gjahr  like bkpf-gjahr memory id fyr  "fiscal year
+*                          obligatory,
+*                 p_rpmax  like glt0-rpmax memory id per. "period
+SELECTION-SCREEN END   OF BLOCK SELECT.
+* posting data
+SELECTION-SCREEN BEGIN OF BLOCK POST WITH FRAME TITLE TEXT-002.
+  PARAMETERS:     P_BLDAT  LIKE BKPF-BLDAT MEMORY ID BLD, "document date
+                  P_BUDAT  LIKE BKPF-BUDAT MEMORY ID BUD, "posting date
+                  P_BLART  LIKE T003-BLART MEMORY ID TYP, "doc.type
+                  P_KOSTL  LIKE CSKS-KOSTL MEMORY ID KS1  "cost centre
+                           MATCHCODE OBJECT KOST,
+*                  account to be used when acct.curr. ne loc.curr.
+                  P_RACCT  LIKE GLT0-RACCT MEMORY ID RCT. "account
+SELECTION-SCREEN END   OF BLOCK POST.
