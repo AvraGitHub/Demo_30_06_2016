@@ -1414,4 +1414,144 @@ data: iMClasses type standard table of arbgb.
 endform.                                                                                          "retrieveMessageClass
 
 
+*----------------------------------------------------------------------------------------------------------------------
+*  retrieveFunctions...   Retrieve function modules from SAP DB.  May be called in one of two ways
+*----------------------------------------------------------------------------------------------------------------------
+form retrieveFunctions using soFName like soFunctionName[]
+                             soFGroup like soFunctionGroup[]
+                             iLocFunctionNames like iFunctions[]
+                             value(solocAuthor) like soAuthor[]
+                             value(getTextElements)
+                             value(getScreens)
+                             value(customerOnly)
+                             value(customerNameRange)
+                             value(soLocPackage) like soPack[].
+
+
+data: waFunctionName type tFunction.
+data: noGroupsFound type abap_bool value TRUE.
+data: previousFG type v_fdir-area.
+
+* select by function name and/or function group.
+  select a~funcName as functionName
+         a~area as functionGroup
+         into corresponding fields of table iLocfunctionNames
+         from v_fdir as a
+         inner join tlibv as b
+           on a~area = b~area
+         inner join tadir as c
+           on a~area = c~obj_name
+         where a~funcName in soFName[]
+           and a~area in soFGroup[]
+           and a~generated = ''
+           and b~uname in soLocAuthor[]
+           and pgmid = 'R3TR'
+           and object = 'FUGR'
+           and devclass in solocPackage[]
+           order by a~area.
+
+  loop at iLocFunctionNames into waFunctionName.
+    perform retrieveFunctionDetail using waFunctionName-functionName
+                                         waFunctionName-progname
+                                         waFunctionName-includeNumber
+                                         waFunctionName-functionTitle.
+
+    perform findMainFunctionInclude using waFunctionName-progname
+                                          wafunctionName-functionGroup
+                                          waFunctionName-includeNumber
+                                          waFunctionName-functionMainInclude.
+
+    perform findFunctionTopInclude using waFunctionName-progname
+                                         wafunctionName-functionGroup
+                                         waFunctionName-topIncludeName.
+
+*   Find all user defined includes within the function group
+    perform scanForFunctionIncludes using waFunctionName-progname
+                                          customerOnly
+                                          customerNameRange
+                                          waFunctionName-iIncludes[].
+*   Find main message class
+    perform findMainMessageClass using waFunctionName-progname
+                                       waFunctionName-messageClass.
+
+*   Find any screens declared within the main include
+    if not getScreens is initial.
+      if previousFG is initial or previousFG <> waFunctionName-functionGroup.
+        perform findFunctionScreenFlow using waFunctionName.
+
+*       Search for any GUI texts
+        perform retrieveGUITitles using waFunctionName-iGUITitle[]
+                                        waFunctionName-progname.
+      endif.
+    endif.
+
+    if not getTextElements is initial.
+*     Find the program texts from out of the database.
+      perform retrieveProgramTexts using waFunctionName-iSelectionTexts[]
+                                         waFunctionName-iTextElements[]
+                                         waFunctionName-progname.
+    endif.
+
+    previousFG = waFunctionName-functionGroup.
+    modify iLocFunctionNames from waFunctionName.
+  endloop.
+endform.                                                                                             "retrieveFunctions
+
+*----------------------------------------------------------------------------------------------------------------------
+*  retrieveFunctionDetail...   Retrieve function module details from SAP DB.
+*----------------------------------------------------------------------------------------------------------------------
+form retrieveFunctionDetail using value(functionName)
+                                        progname
+                                        includeName
+                                        titleText.
+
+  select single pname
+                include
+                from tfdir
+                into (progname, includeName)
+                where funcName = functionName.
+
+  if sy-subrc = 0.
+    select single stext
+                  from tftit
+                  into titleText
+                  where spras = pMLang
+                    and funcName = functionName.
+  endif.
+endform.                                                                                        "retrieveFunctionDetail                                                                                  "findFunctionTopInclude
+
+*----------------------------------------------------------------------------------------------------------------------
+* scanForAdditionalFuncStuff... Search for additional things relating to functions
+*----------------------------------------------------------------------------------------------------------------------
+form scanForAdditionalFuncStuff using iLocFunctions like iFunctions[]
+                                      value(recursiveIncludes)
+                                      value(recursiveFunctions)
+                                      value(searchForIncludes)
+                                      value(searchForFunctions)
+                                      value(searchForDictionary)
+                                      value(searchForMessages)
+                                      value(customerOnly)
+                                      value(customerNameRange).
+
+data: waFunction type tFunction.
+data: waInclude type tInclude.
+
+  loop at iLocFunctions into waFunction.
+    if not searchForIncludes is initial.
+*     Search in the main include
+      perform scanForIncludePrograms using waFunction-functionMainInclude
+                                           recursiveIncludes
+                                           customerOnly
+                                           customerNameRange
+                                           waFunction-iIncludes[].
+
+*     Search in the top include
+      perform scanForIncludePrograms using waFunction-topIncludeName
+                                           recursiveIncludes
+                                           customerOnly
+                                           customerNameRange
+                                           waFunction-iIncludes[].
+    endif.
+
+
 
