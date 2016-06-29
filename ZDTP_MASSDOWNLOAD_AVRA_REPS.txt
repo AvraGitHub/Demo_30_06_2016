@@ -484,4 +484,91 @@ data: objFile type ref to cl_gui_frontend_services.
 data: pickedFolder type string.
 data: initialFolder type string.
 
+  if sy-batch is initial.
+    create object objFile.
+
+    if not pFolder is initial.
+      initialFolder = pFolder.
+    else.
+      objFile->get_temp_directory( changing temp_dir = initialFolder
+                                   exceptions cntl_error = 1
+                                             error_no_gui = 2
+                                             not_supported_by_gui = 3 ).
+    endif.
+
+    objFile->directory_browse( exporting initial_folder = initialFolder
+                               changing selected_folder = pickedFolder
+                               exceptions cntl_error = 1
+                                          error_no_gui = 2
+                                          not_supported_by_gui = 3 ).
+
+    if sy-subrc = 0.
+      pFolder = pickedFolder.
+    else.
+      write: / 'An error has occured picking a folder'.
+    endif.
+  endif.
+
+*----------------------------------------------------------------------------------------------------------------------
+at selection-screen.
+*----------------------------------------------------------------------------------------------------------------------
+  case 'X'.
+    when pPc.
+      if pFolder is initial.
+*       User must enter a path to save to
+        message e000(oo) with 'You must enter a file path'.
+      endif.
+
+    when pServ.
+      if pLogical is initial.
+*       User must enter a logical path to save to
+        message e000(oo) with 'You must enter a logical file name'.
+      endif.
+  endcase.
+
+*----------------------------------------------------------------------------------------------------------------------
+at selection-screen on pLogical.
+*----------------------------------------------------------------------------------------------------------------------
+  if not pServ is initial.
+    call function 'FILE_GET_NAME' exporting logical_filename = pLogical
+                                  importing file_name = serverFolder
+                                  exceptions file_not_found = 1
+                                             others = 2.
+    if sy-subrc = 0.
+      if serverFolder is initial.
+        message e000(oo) with 'No file path returned from logical filename'.
+      else.
+*       Path to display on the selection screen
+        tSDPath = serverFolder.
+*       Remove the trailing slash off the path as the subroutine buildFilename will add an extra one
+        shift serverFolder right deleting trailing serverSlashSeparator.
+        shift serverFolder left deleting leading space.
+      endif.
+    else.
+      message e000(oo) with 'Logical filename does not exist'.
+    endif.
+  endif.
+
+* ---------------------------------------------------------------------------------------------------------------------
+at selection-screen on value-request for soProg-low.
+* ---------------------------------------------------------------------------------------------------------------------
+  call function 'REPOSITORY_INFO_SYSTEM_F4' exporting object_type  = 'PROG'
+                                                      object_name  = soProg-low
+                                                      suppress_selection   = 'X'
+                                                      use_alv_grid = ''
+                                                      without_personal_list = ''
+                                            importing object_name_selected = soProg-low
+                                            exceptions cancel = 1.
+
+* ---------------------------------------------------------------------------------------------------------------------
+at selection-screen on value-request for soProg-high.
+* ---------------------------------------------------------------------------------------------------------------------
+  call function 'REPOSITORY_INFO_SYSTEM_F4' exporting object_type  = 'PROG'
+                                                      object_name  = soProg-high
+                                                      suppress_selection   = 'X'
+                                                      use_alv_grid = ''
+                                                      without_personal_list = ''
+                                            importing object_name_selected = soProg-high
+                                            exceptions cancel = 1.
+
 
