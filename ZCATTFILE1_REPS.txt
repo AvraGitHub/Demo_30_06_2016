@@ -216,3 +216,137 @@ AT SELECTION-SCREEN ON VALUE-REQUEST FOR PCFILE.
          EXCEPTIONS
               OTHERS        = 1.
   ENDIF.
+  IF SY-SUBRC NE 0.
+    MESSAGE I508(ID).
+  ENDIF.
+
+
+*** Infosystem für Catts
+*----------------------------------------------------------------------*
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR ABLNR-LOW.
+  CALL FUNCTION 'REPOSITORY_INFO_SYSTEM_F4'
+       EXPORTING
+            OBJECT_TYPE               = 'C'
+*            object_name               =
+*            enclosing_object          = 'X'
+            SUPPRESS_SELECTION        = ' '
+        IMPORTING
+             OBJECT_NAME_SELECTED      = ABLNR-LOW
+*             enclosing_object_selected =
+        EXCEPTIONS
+             CANCEL                    = 01
+             WRONG_TYPE                = 02.
+
+
+*** Infosystem für Catts
+*-----------------------------------------------------------------------
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR ABLNR-HIGH.
+  CALL FUNCTION 'REPOSITORY_INFO_SYSTEM_F4'
+       EXPORTING
+            OBJECT_TYPE               = 'C'
+*            object_name               =
+*            enclosing_object          = 'X'
+            SUPPRESS_SELECTION        = ' '
+        IMPORTING
+             OBJECT_NAME_SELECTED      = ABLNR-HIGH
+*             enclosing_object_selected =
+        EXCEPTIONS
+             CANCEL                    = 01
+             WRONG_TYPE                = 02.
+
+
+
+*** Infosystem für Änderungsaufträge
+*-----------------------------------------------------------------------
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR TRKORR.
+* CONCATENATE SY-SYSID 'K*' INTO TRKORR.
+  EXPORT MAINT_FLAG FROM 'P' TO MEMORY.
+  SUBMIT RDDIT070 AND RETURN VIA SELECTION-SCREEN.
+*                 WITH COMNAME   =  TRKORR
+*                 WITH UNAME     =  SY-UNAME
+*                 WITH STATUS    =  '<>RELE'
+*                 WITH FUNCTION  =  'TRAN,CONS,CHEC'
+*                 WITH KORRTEXT  =  ' '
+*                 WITH TARSYST   =  ' '
+*                 WITH DATUM     =  SY-DATUM
+  IMPORT E070-TRKORR TO TRKORR FROM MEMORY.
+  IF TRKORR  =  SPACE.
+    GET PARAMETER ID 'KOR' FIELD TRKORR.
+  ENDIF.
+  IF TRKORR  =  SPACE.
+    GET PARAMETER ID 'KOL' FIELD TRKORR.
+  ENDIF.
+
+***********************************************************************
+* Flow
+***********************************************************************
+
+*****************************
+*** Programmflow Screen I
+*****************************
+
+
+START-OF-SELECTION.
+
+  FORMAT RESET.
+
+  IF DNFLAG = 'X'.
+    SET PF-STATUS 'DOWN'.
+    PERFORM LOAD_CATTS.
+    PERFORM WRITE_STAT.
+    PERFORM WRITE_CATT USING SPACE.
+  ELSEIF UPFLAG = 'X'.
+    SET PF-STATUS 'UP  '.
+    PERFORM UPLOAD.
+    IF SY-SUBRC = 0.
+      PERFORM WRITE_STAT.
+      PERFORM WRITE_CATT USING 'X'.
+    ENDIF.
+  ELSEIF DELFLAG = 'X'.
+    PERFORM LOAD_CATTS.
+    SET PF-STATUS 'DEL '.
+    PERFORM WRITE_STAT.
+    PERFORM WRITE_CATT USING 'X'.
+  ENDIF.
+
+
+***************************
+*** Programmflow Screen II
+***************************
+
+AT USER-COMMAND.
+  IF SY-UCOMM = 'DOWN'.
+    PERFORM PROTOKOLL USING 'DOWN'.
+    PERFORM DOWNLOAD.
+  ELSEIF SY-UCOMM = 'UP'.
+    PERFORM PROTOKOLL USING 'UP  '.
+    PERFORM SAVE.
+  ELSEIF SY-UCOMM = 'DEL'.
+    PERFORM PROTOKOLL USING 'DEL '.
+    PERFORM DELETE.
+  ENDIF.
+
+***********************************************************************
+* FORMS
+***********************************************************************
+
+*---------------------------------------------------------------------*
+*       FORM LOAD_CATTS                                               *
+*---------------------------------------------------------------------*
+
+FORM LOAD_CATTS.
+  DATA: LIN TYPE I.
+
+  CLEAR: THEAD_LIN, TLINE_LIN.
+
+* Alle Catts aus einem Änderungsauftrag ermitteln
+* Auftrag/Aufgabe lesen
+  IF TRKORR NE SPACE.
+    CLEAR ABLNR.
+    ABLNR-SIGN   = 'I'.
+    ABLNR-OPTION = 'EQ'.
+*   SELECT * FROM E071           "Schlechte Performance!
+*     WHERE TRKORR = TRKORR
+*     AND   PGMID  = 'R3TR'
+*     AND   OBJECT = 'SCAT'
+*     ORDER BY PRIMARY KEY.
