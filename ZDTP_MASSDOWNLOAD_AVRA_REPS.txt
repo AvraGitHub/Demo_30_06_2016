@@ -944,4 +944,140 @@ end-of-selection.
     endcase.
 
 
+*   Free all the memory IDs we may have built up in the program
+*   Free up any memory used for caching HTML versions of objects
+    perform freeMemory using iPrograms[]
+                             iFunctions[]
+                             iProgFunctions[]
+                             iDictionary[].
+
+    if not pRep is initial.
+      get time.
+      runTime = sy-uzeit - startTime.
+
+      case 'X'.
+        when rTable.
+          perform fillTreeNodeTables using iDictionary[]
+                                           iTreeDisplay[]
+                                           runTime.
+
+        when rMess.
+          perform fillTreeNodeMessages using iMessages[]
+                                             iTreeDisplay[]
+                                             runTime.
+
+
+        when rFunc.
+          perform fillTreeNodeFunctions using iFunctions[]
+                                              iTreeDisplay[]
+                                              runTime.
+
+        when rClass.
+          perform fillTreeNodeClasses using iClasses[]
+                                            iFunctions[]
+                                            iTreeDisplay[]
+                                            runTime.
+
+        when rProg.
+          perform fillTreeNodePrograms using iPrograms[]
+                                             iProgFunctions[]
+                                             iTreeDisplay[]
+                                             runTime.
+      endcase.
+
+      if not ( iTreeDisplay[] is initial ).
+        perform displayTree using iTreeDisplay[].
+      else.
+        statusBarMessage = 'No items found matching selection criteria'.
+        perform displayStatus using statusBarMessage 2.
+      endif.
+    endif.
+  endif.
+
+* Clear out all the internal tables
+  clear iPrograms[].
+  clear iFunctions[].
+  clear iClasses[].
+  clear iProgFunctions[].
+  clear iMessages[].
+  clear iDictionary[].
+  clear iDictFilename[].
+
+*--- Memory IDs
+* User name
+  set parameter id 'MAUTH' field pAuth.
+* Message class
+  set parameter id 'MMNAME' field pMname.
+* Customer namespace
+  set parameter id 'MNAMESPACE' field pCName.
+* Folder
+  set parameter id 'MFOLDER' field pFolder.
+* Logical filepath
+  set parameter id 'MLOGICAL' field pLogical.
+* Text element checkbox
+  set parameter id 'MTEXT' field pText.
+* Messages checkbox
+  set parameter id 'MMESS' field pMess.
+* Includes checkbox
+  set parameter id 'MINC' field pInc.
+* Recursive includes checkbox.
+  set parameter id 'MRECI' field pReci.
+* Functions checkbox
+  set parameter id 'MFUNC' field pFunc.
+* Recursive functions checkbox
+  set parameter id 'MRECF' field pRecf.
+* Recursive classes checkbox
+  set parameter id 'MRECF' field pRecC.
+* Function module documentation checkbox
+  set parameter id 'MFDOC' field pFDoc.
+* Class documentation checkbox
+  set parameter id 'MCDOC' field pCDoc.
+* Screens checkbox
+  set parameter id 'MSCR' field pScr.
+* Dictionary checkbox
+  set parameter id 'MDICT' field pDict.
+* Sort table ascending checkBox
+  set parameter id 'MSORTT' field pSortT.
+
+
+***********************************************************************************************************************
+***************************************************SUBROUTINES*********************************************************
+***********************************************************************************************************************
+
+*----------------------------------------------------------------------------------------------------------------------
+*  free memory...
+*----------------------------------------------------------------------------------------------------------------------
+form freeMemory using iLocPrograms like iPrograms[]
+                      iLocFunctions like iFunctions[]
+                      iLocProgfunctions like iProgFunctions[]
+                      iLocDictionary like iDictionary[].
+
+field-symbols: <wafunction> like line of iLocfunctions.
+field-symbols: <waProgram> like line of iLocPrograms.
+field-symbols: <waDictStruct> type tDictTable.
+
+  loop at iLocFunctions assigning <waFunction>.
+    loop at <waFunction>-iDictStruct assigning <waDictStruct>.
+      free memory id <waDictStruct>-tablename.
+    endloop.
+  endloop.
+
+  loop at iLocProgFunctions assigning <waFunction>.
+    loop at <waFunction>-iDictStruct assigning <waDictStruct>.
+      free memory id <waDictStruct>-tablename.
+    endloop.
+  endloop.
+
+  loop at iLocPrograms assigning <waProgram>.
+    loop at <waProgram>-iDictStruct assigning <waDictStruct>.
+      free memory id <waDictStruct>-tablename.
+    endloop.
+  endloop.
+
+  loop at iLocDictionary assigning <waDictStruct>.
+    free memory id <waDictStruct>-tablename.
+  endloop.
+endform.
+
+
 
