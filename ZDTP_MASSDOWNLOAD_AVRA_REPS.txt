@@ -571,4 +571,126 @@ at selection-screen on value-request for soProg-high.
                                             importing object_name_selected = soProg-high
                                             exceptions cancel = 1.
 
+* ---------------------------------------------------------------------------------------------------------------------
+at selection-screen on value-request for soClass-low.
+* ---------------------------------------------------------------------------------------------------------------------
+  call function 'F4_DD_ALLTYPES' exporting object = soClass-low
+                                           suppress_selection = 'X'
+                                           display_only = ''
+                                           only_types_for_clifs = 'X'
+                                 importing result = soClass-low.
+
+* ---------------------------------------------------------------------------------------------------------------------
+at selection-screen on value-request for soClass-high.
+* ---------------------------------------------------------------------------------------------------------------------
+  call function 'F4_DD_ALLTYPES' exporting object = soClass-high
+                                           suppress_selection = 'X'
+                                           display_only = ''
+                                           only_types_for_clifs = 'X'
+                                 importing result = soClass-high.
+
+* ---------------------------------------------------------------------------------------------------------------------
+at selection-screen on value-request for soFName-low.
+* ---------------------------------------------------------------------------------------------------------------------
+  call function 'REPOSITORY_INFO_SYSTEM_F4' exporting object_type  = 'FUNC'
+                                                      object_name  = soFname-low
+                                                      suppress_selection   = 'X'
+                                                      use_alv_grid = ''
+                                                      without_personal_list = ''
+                                            importing object_name_selected = soFName-low
+                                            exceptions cancel = 1.
+
+* ---------------------------------------------------------------------------------------------------------------------
+at selection-screen on value-request for soFName-high.
+* ---------------------------------------------------------------------------------------------------------------------
+  call function 'REPOSITORY_INFO_SYSTEM_F4' exporting object_type  = 'FUNC'
+                                                      object_name  = soFname-high
+                                                      suppress_selection   = 'X'
+                                                      use_alv_grid = ''
+                                                      without_personal_list = ''
+                                            importing object_name_selected = soFName-high
+                                            exceptions cancel = 1.
+
+* ---------------------------------------------------------------------------------------------------------------------
+at selection-screen on value-request for soFGroup-low.
+* ---------------------------------------------------------------------------------------------------------------------
+  call function 'REPOSITORY_INFO_SYSTEM_F4' exporting object_type  = 'FUGR'
+                                                      object_name  = soFGroup-low
+                                                      suppress_selection   = 'X'
+                                                      use_alv_grid = ''
+                                                      without_personal_list = ''
+                                            importing object_name_selected = soFGroup-low
+                                            exceptions cancel = 1.
+
+* ---------------------------------------------------------------------------------------------------------------------
+at selection-screen on value-request for soFGroup-high.
+* ---------------------------------------------------------------------------------------------------------------------
+  call function 'REPOSITORY_INFO_SYSTEM_F4' exporting object_type  = 'FUGR'
+                                                      object_name  = soFGroup-high
+                                                      suppress_selection   = 'X'
+                                                      use_alv_grid = ''
+                                                      without_personal_list = ''
+                                            importing object_name_selected = soFGroup-high
+                                            exceptions cancel = 1.
+
+*----------------------------------------------------------------------------------------------------------------------
+* initialisation
+*----------------------------------------------------------------------------------------------------------------------
+initialization.
+* Parameter screen texts.
+  tBlock1 = 'Author (Optional)'.
+  tBlock2 = 'Objects to download'.
+  tBlock3 = 'Additional downloads for programs, function modules and classes'.
+  tBlock4 = 'Download parameters'.
+  tBlock5 = 'Display options'.
+  tAuth   = 'Author name'.
+  tPmod   = 'Include programs modified by author'.
+  tCust   = 'Only customer objects'.
+  tNRange = 'Alt customer name range'.
+  tRtable = 'Tables / Structures'.
+  tPtable = 'Table name'.
+  tTnote  = 'Note: tables are stored under the username of the last person who modified them'.
+  tRfunc  = 'Function modules'.
+  tPfname = 'Function name'.
+  tFgroup = 'Function group'.
+  tRClass  = 'Classes'.
+  tPcname = 'Class name'.
+  tMess   = 'Message class'.
+  tMName  = 'Class name'.
+  tMLang  = 'Language'.
+  tProg   = 'Programs'.
+  tRpname = 'Program name'.
+  tPack   = 'Package'.
+  tPtxt   = 'Text document'.
+  tPhtml  = 'HTML document'.
+  tBack   = 'Include background colour'.
+  tPtext  = 'Text elements'.
+  tPinc   = 'Include programs'.
+  tRecI   = 'Recursive search'.
+  tPpath  = 'File path'.
+  tSPath  = 'Logical file name'.
+  tPmes   = 'Message classes'.
+  tPfunc  = 'Function modules'.
+  tFDoc    = 'Function module documentation'.
+  tCDoc    = 'Class documentation'.
+  tRecf   = 'Recursive search'.
+  tRecC   = 'Class recursive search'.
+  tPscr   = 'Screens'.
+  tPdict  = 'Dictionary structures'.
+  tSortT  = 'Sort table fields alphabetically'.
+  tServ   = 'Download to server'.
+  tPc     = 'Download to PC'.
+  tRep    = 'Display download report'.
+  tProMess  = 'Display progress messages'.
+
+* Determine the frontend operating system type.
+  if sy-batch is initial.
+    perform determineFrontendOPSystem using frontendSlashSeparator frontendOpSystem.
+  endif.
+  perform determineServerOpsystem using serverSlashSeparator serverFileSystem serverOpsystem.
+
+* Determine if the external command exists.  If it doesn't then disable the server input field
+  perform findExternalCommand using serverFileSystem.
+
+
 
