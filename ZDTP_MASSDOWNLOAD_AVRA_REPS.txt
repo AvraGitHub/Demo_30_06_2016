@@ -2753,4 +2753,135 @@ data: altCustomerNameRange type string.
 endform.                                                                          "findClassesByWildcard
 
 
+*-------------------------------------------------------------------------------------------------------
+*  checkClassDoesExist...
+*-------------------------------------------------------------------------------------------------------
+form checkClassDoesExist using iLocClass like iClasses[]
+                               rangeClass like soClassName[].
+
+data: waClass type tClass.
+
+  select single clsname descript msg_id
+         from vseoclass
+         into corresponding fields of waClass
+         where clsname in rangeClass
+           and version = '1'
+           and ( state = '0' or state = '1' ).
+
+  if sy-subrc <> 0.
+    select single clsname descript msg_id
+         from vseoclass
+         into corresponding fields of waClass
+         where clsname in rangeClass
+           and version = '0'
+           and ( state = '0' or state = '1' ).
+  endif.
+
+   if not waClass-clsname is initial.
+     append waClass to iLocClass.
+   endif.
+endform.                                                                            "checkClassDoesExist
+
+*-------------------------------------------------------------------------------------------------------
+*  scanForAdditionalClassStuff...
+*-------------------------------------------------------------------------------------------------------
+form scanForAdditionalClassStuff using iLocClasses like iClasses[]
+                                       iLocFunctions like iFunctions[]
+                                       value(getTextElements)
+                                       value(getMessages)
+                                       value(getCustDictStructures)
+                                       value(getFunctions)
+                                       value(getIncludes)
+                                       value(customerOnly)
+                                       value(customerNameRange)
+                                       value(recursiveIncludeSearch)
+                                       value(recursiveFuncSearch)
+                                       value(recursiveClassSearch)
+                                       value(soLocPackage) like soPack[].
+
+data: waClass type tClass.
+data: waMethod type tMethod.
+data: myTabix type syTabix.
+data: scanningForClasses type abap_bool value FALSE.
+data: classNewLines type i value 0.
+data: classCurrentLines type i value 0.
+
+  loop at iLocClasses into waClass where scanned is initial.
+*  Once we have a list of all the classes we need to loop round them an select all the other objects
+    myTabix = sy-tabix.
+    perform findClassDetails using waClass-clsName
+                                   waClass
+                                   iLocFunctions[]
+                                   getTextElements
+                                   getMessages
+                                   getFunctions
+                                   getCustDictStructures
+                                   customerOnly
+                                   customerNameRange.
+
+*   Set the scanned class so we do not check them again when running recursively.
+    waClass-scanned = 'X'.
+    modify iLocClasses from waClass index myTabix.
+  endloop.
+
+* Now we have all the classes and details we need to find extra classes
+  if not recursiveClassSearch is initial.
+    classCurrentLines = lines( iLocClasses ).
+    loop at iLocClasses into waClass.
+*     Don't try and find any other details for an exception class
+      if ( waClass-clsName ns 'ZCX_' or waClass-clsName ns 'CX_'  ).
+*       Find any classes defined in the main class definition
+        perform scanForClasses using waClass-privateClassKey
+                                     waClass-clsname
+                                     customerOnly
+                                     customerNameRange
+                                     iLocClasses[]
+                                     soLocPackage[].
+
+        perform scanForClasses using waClass-publicClassKey
+                                     waClass-clsname
+                                     customerOnly
+                                     customerNameRange
+                                     iLocClasses[]
+                                     soLocPackage[].
+
+        perform scanForClasses using waClass-protectedClassKey
+                                     waClass-clsname
+                                     customerOnly
+                                     customerNameRange
+                                     iLocClasses[]
+                                     soLocPackage[].
+
+        loop at waClass-iMethods into waMethod.
+*         Find any classes defined in any of the methods
+          perform scanForClasses using waMethod-methodKey
+                                       waClass-clsname
+                                       customerOnly
+                                       customerNameRange
+                                       iLocClasses[]
+                                       soLocPackage[].
+        endloop.
+      endif.
+    endloop.
+
+*   We have a list of all the classes so lets go and find their details
+    classNewLines = lines( iLocClasses ).
+    if classNewLines > classCurrentLines.
+      perform scanForAdditionalClassStuff using iLocClasses[]
+                                                iLocFunctions[]
+                                                getTextElements
+                                                getMessages
+                                                getCustDictStructures
+                                                getFunctions
+                                                getIncludes
+                                                customerOnly
+                                                customerNameRange
+                                                recursiveIncludeSearch
+                                                recursiveFuncSearch
+                                                recursiveClassSearch
+                                                soLocPackage[].
+    endif.
+  endif.
+endform.                                                                   "scanForAdditionalClassStuff
+
 
