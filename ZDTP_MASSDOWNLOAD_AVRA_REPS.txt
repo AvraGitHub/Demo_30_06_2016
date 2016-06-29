@@ -1234,5 +1234,184 @@ data: strLength type i.
   endif.
 endform.                                                                                          " fillSelectionRanges
 
+*----------------------------------------------------------------------------------------------------------------------
+*  retrieveTables...             Search for tables in dictionary
+*----------------------------------------------------------------------------------------------------------------------
+form retrieveTables using iLocDictStructure like iDictionary[]
+                          soTable like soTable[]
+                          soAuthor like soAuthor[]
+                          value(soLocPackage) like soPack[].
+
+data: iDictStructure type standard table of tDictTable.
+data: waDictStructure type tDictTable.
+
+  select a~tabname as tableName
+         into corresponding fields of table iDictStructure
+         from dd02l as a
+         inner join tadir as b
+           on a~tabname = b~obj_name
+         where a~tabname in soTable
+           and a~tabclass <> 'CLUSTER'
+           and a~tabclass <> 'POOL'
+           and a~tabclass <> 'VIEW'
+           and a~as4user in soAuthor
+           and a~as4local = 'A'
+           and b~pgmid = 'R3TR'
+           and b~object = 'TABL'
+           and b~devclass in soLocPackage[].
+
+  loop at iDictStructure into waDictStructure.
+    perform findTableDescription using waDictStructure-tablename
+                                       waDictStructure-tableTitle.
+
+    perform findTableDefinition using waDictStructure-tableName
+                                      waDictStructure-iStructure[].
+
+    append waDictStructure to iLocDictStructure.
+    clear waDictStructure.
+  endloop.
+endform.                                                                                                "retrieveTables
+
+*----------------------------------------------------------------------------------------------------------------------
+*  findTableDescription...  Search for table description in dictionary
+*----------------------------------------------------------------------------------------------------------------------
+form findTableDescription using value(tableName)
+                                      tableDescription.
+
+    select single ddtext
+                  from dd02t
+                  into tableDescription
+                  where tabname = tableName
+                   and ddlanguage = pMLang.
+endform.                                                                                          "findTableDescription
+
+*----------------------------------------------------------------------------------------------------------------------
+*  findTableDefinition... Find the structure of a table from the SAP database.
+*----------------------------------------------------------------------------------------------------------------------
+form findTableDefinition using value(tablename)
+                               iDictStruct like dumIDictStructure[].
+
+data gotstate like dcobjif-gotstate.
+data: definition type standard table of DD03P with header line.
+data: waDictStruct type tDictTableStructure.
+
+  call function 'DDIF_TABL_GET'
+       exporting
+            name          = tablename
+            state         = 'A'
+            langu         = pMLang
+       importing
+            gotstate      = gotstate
+       tables
+            dd03p_tab     = definition
+       exceptions
+            illegal_input = 1
+            others        = 2.
+
+  if sy-subrc = 0 and gotstate = 'A'.
+    loop at definition.
+      move-corresponding definition to waDictStruct.
+      perform removeLeadingZeros changing waDictStruct-position.
+      perform removeLeadingZeros changing waDictStruct-leng.
+      append waDictStruct to iDictStruct.
+    endloop.
+  endif.
+endform.                                                                                           "findTableDefinition
+
+*----------------------------------------------------------------------------------------------------------------------
+*  retrieveMessageClass...   Retrieve a message class from the SAP database
+*----------------------------------------------------------------------------------------------------------------------
+form retrieveMessageClass using iLocMessages like iMessages[]
+                                rangeAuthor like soAuthor[]
+                                value(messageClassName)
+                                value(messageClassLang)
+                                value(modifiedBy)
+                                value(soLocPackage) like soPack[].
+
+data: waMessage type tMessage.
+data: iMClasses type standard table of arbgb.
+
+
+  if not messageClassName is initial.
+*   Check to see if the message class exists in the package
+    if not soLocPackage[] is initial.
+        select obj_name as arbgb
+               into table iMClasses
+               from tadir
+               where pgmid = 'R3TR'
+                 and object = 'MSAG'
+                 and devclass in soLocPackage.
+    endif.
+
+    replace '*' with '%' into messageClassName.
+    if iMCLasses[] is initial.
+      select t100~arbgb
+             t100~text
+             t100~msgnr
+             t100a~stext
+             appending corresponding fields of table iLocMessages
+             from t100
+             inner join t100a
+               on t100a~arbgb = t100~arbgb
+             where t100a~masterLang = messageClassLang
+               and t100~sprsl = messageClassLang
+               and t100~arbgb like messageClassName
+               and t100a~respUser in rangeAuthor[].
+    else.
+      select t100~arbgb
+             t100~text
+             t100~msgnr
+             t100a~stext
+             appending corresponding fields of table iLocMessages
+             from t100
+             inner join t100a
+               on t100a~arbgb = t100~arbgb
+             for all entries in iMClasses
+               where t100~sprsl = messageClassLang
+               and ( t100~arbgb like messageClassName and t100~arbgb = iMClasses-table_line )
+               and t100a~masterLang = messageClassLang
+               and t100a~respUser in rangeAuthor[].
+    endif.
+  else.
+    if modifiedBy is initial.
+*       Select by author
+        select t100~arbgb                             "#EC CI_BUFFJOIN
+               t100~msgnr
+               t100~text
+               t100a~stext
+               appending corresponding fields of table iLocMessages
+               from t100
+               inner join t100a
+                 on t100a~arbgb = t100~arbgb
+               inner join tadir
+                 on t100~arbgb = tadir~obj_name
+               where t100a~masterLang = messageClassLang
+                 and t100a~respUser in rangeAuthor[]
+                 and tadir~pgmid = 'R3TR'
+                 and tadir~object = 'MSAG'
+                 and tadir~devclass in soLocPackage[].
+
+    else.
+*     Select also by the last person who modified the message class
+      select t100~arbgb                             "#EC CI_BUFFJOIN
+             t100~msgnr
+             t100~text
+             t100a~stext
+             appending corresponding fields of table iLocMessages
+             from t100
+             inner join t100a
+               on t100a~arbgb = t100~arbgb
+             inner join tadir
+               on t100~arbgb = tadir~obj_name
+             where t100a~masterLang = messageClassLang
+               and t100a~respUser in rangeAuthor[]
+               and t100a~lastUser in rangeAuthor[]
+               and tadir~pgmid = 'R3TR'
+               and tadir~object = 'MSAG'
+               and tadir~devclass in soLocPackage[].
+    endif.
+  endif.
+endform.                                                                                          "retrieveMessageClass
+
 
 
