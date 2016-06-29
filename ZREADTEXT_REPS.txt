@@ -84,3 +84,47 @@ DO.
   PERFORM output_doc_info.
 
 ENDDO.
+FORM output_doc_info.
+
+  DATA: lt_text_lines TYPE TABLE OF tline.
+  FIELD-SYMBOLS: <lw_vbka>      LIKE vbka,
+                 <lw_vbpa>      LIKE vbpa,
+                 <lw_vbfa>      LIKE vbfa,
+                 <lw_text_line> TYPE tline.
+
+  LOOP AT gt_vbka ASSIGNING <lw_vbka>.
+    "there will be only one VBKA per data object
+    WRITE: /1 <lw_vbka>-vbeln, 15 <lw_vbka>-ktaar, 22 <lw_vbka>-erdat,
+           40 <lw_vbka>-ernam, 56 <lw_vbka>-aedat.
+  ENDLOOP.
+
+  LOOP AT gt_vbpa ASSIGNING <lw_vbpa>.
+    WRITE: /22 <lw_vbpa>-parvw, 40 <lw_vbpa>-parnr, 56 <lw_vbpa>-adrnr.
+  ENDLOOP.
+
+  LOOP AT gt_vbfa ASSIGNING <lw_vbfa>.
+    WRITE: /56 <lw_vbfa>-vbeln, 71 <lw_vbfa>-vbtyp_n.
+  ENDLOOP.
+
+
+  IF ausgtext = 'X'.
+
+*   select the text lines
+*...
+
+
+
+
+
+
+
+*   display the text on screen
+    LOOP AT lt_text_lines ASSIGNING <lw_text_line>.
+* ...
+    ENDLOOP.
+
+  ENDIF.
+  SKIP 2.
+
+
+ENDFORM.                    "OUTPUT_DOC_INFO
