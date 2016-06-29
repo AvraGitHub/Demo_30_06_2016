@@ -1553,5 +1553,147 @@ data: waInclude type tInclude.
                                            waFunction-iIncludes[].
     endif.
 
+    if not searchForFunctions is initial.
+      perform scanForFunctions using waFunction-functionMainInclude
+                                     waFunction-programLinkName
+                                     recursiveIncludes
+                                     recursiveFunctions
+                                     customerOnly
+                                     customerNameRange
+                                     iLocFunctions[].
+    endif.
+
+    modify iLocFunctions from waFunction.
+  endloop.
+
+* Now we have everthing perhaps we had better find all the dictionary structures
+  if not searchForDictionary is initial.
+    loop at iLocFunctions into waFunction.
+      perform scanForTables using waFunction-progname
+                                  customerOnly
+                                  customerNameRange
+                                  waFunction-iDictStruct[].
+
+      perform scanForLikeOrType using waFunction-progname
+                                      customerOnly
+                                      customerNameRange
+                                      waFunction-iDictStruct[].
+
+      perform scanForTables using waFunction-functionMainInclude
+                                  customerOnly
+                                  customerNameRange
+                                  waFunction-iDictStruct[].
+
+      perform scanForLikeOrType using waFunction-functionMainInclude
+                                      customerOnly
+                                      customerNameRange
+                                      waFunction-iDictStruct[].
+
+      loop at waFunction-iIncludes into waInclude.
+        perform scanForTables using waInclude-includeName
+                                    customerOnly
+                                    customerNameRange
+                                    waFunction-iDictStruct[].
+
+        perform scanForLikeOrType using waInclude-includeName
+                                        customerOnly
+                                        customerNameRange
+                                        waFunction-iDictStruct[].
+      endloop.
+
+    modify iLocFunctions from waFunction.
+    endloop.
+  endif.
+
+* Now search for all messages
+  if not searchForMessages is initial.
+    loop at iLocFunctions into waFunction.
+      perform scanForMessages using waFunction-progName
+                                    waFunction-messageClass
+                                    waFunction-iMessages[].
+    modify iLocFunctions from waFunction.
+    endloop.
+  endif.
+endform.                                                                                    "scanForAdditionalFuncStuff
+
+*----------------------------------------------------------------------------------------------------------------------
+* scanForClasses... Search each class or method for other classes
+*----------------------------------------------------------------------------------------------------------------------
+form scanForClasses using value(className)
+                          value(classLinkName)
+                          value(customerOnly)
+                          value(customerNameRange)
+                                iLocClasses like iClasses[]
+                          value(soLocPackage) like soPack[].
+
+data iLines type standard table of string with header line.
+data: head type string.
+data: tail type string.
+data: lineLength type i value 0.
+data: waLine type string.
+data: waClass type tClass.
+data: waSearchClass type tClass.
+data: castClassName type program.
+data: exceptionCustomerNameRange type string.
+
+* Build the name of the possible cusotmer exception classes
+  concatenate customerNameRange 'CX_' into  exceptionCustomerNameRange.
+
+* Read the program code from the textpool.
+  castClassName = className.
+  read report castClassName into iLines.
+
+  loop at iLines into waLine.
+*   Find custom tables.
+    lineLength = strLen( waLine ).
+    if lineLength > 0.
+      if waLine(1) = ASTERIX.
+        continue.
+      endif.
+
+      translate waLine to upper case.
+
+      find TYPEREFTO in waLine ignoring case.
+      if sy-subrc = 0.
+*       Have found a reference to another class
+        split waLine at TYPE into head tail.
+        shift tail left deleting leading space.
+        split tail at 'REF' into head tail.
+        shift tail left deleting leading space.
+        split tail at 'TO' into head tail.
+        shift tail left deleting leading space.
+        if tail cs PERIOD.
+          split tail at PERIOD into head tail.
+        else.
+          if tail cs COMMA.
+            split tail at COMMA into head tail.
+          endif.
+        endif.
+      else.
+*       Try and find classes which are only referenced through static mehods
+        find '=>' in waLine match offset sy-fdpos.
+        if sy-subrc = 0.
+          head = waline+0(sy-fdpos).
+          shift head left deleting leading space.
+          condense head.
+          find 'call method' in head ignoring case.
+          if sy-subrc = 0.
+            shift head left deleting leading space.
+            split head at space into head tail.
+            split tail at space into head tail.
+*           Should have the class name here
+            head = tail.
+          else.
+*           Still have a class name even though it does not have the words call method in front
+            if waLine cs '='.
+              split waLine at '=' into tail head.
+              shift head left deleting leading space.
+              split head at '=' into head tail.
+            endif.
+            sy-subrc = 0.
+          endif.
+        endif.
+      endif.
+
 
 
