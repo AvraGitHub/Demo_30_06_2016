@@ -2065,5 +2065,100 @@ data: waRangeProgram like line of rangeProgram.
                                            recursiveFuncSearch.
 endform.                                                                               "retrievePrograms
 
+*-------------------------------------------------------------------------------------------------------
+*  scanForAdditionalProgStuff...
+*-------------------------------------------------------------------------------------------------------
+form scanForAdditionalProgStuff using iLocProgram like iPrograms[]
+                                      iLocFunctions like iFunctions[]
+                                      value(getTextElements)
+                                      value(getMessages)
+                                      value(getScreens)
+                                      value(getCustDictStructures)
+                                      value(getFunctions)
+                                      value(getIncludes)
+                                      value(customerOnly)
+                                      value(customerNameRange)
+                                      value(recursiveIncludeSearch)
+                                      value(recursiveFuncSearch).
+
+data: waProgram type tProgram.
+data: waInclude type tInclude.
+data: myTabix type syTabix.
+
+* Best to find all the includes used in a program first
+  if not getIncludes is initial.
+    loop at iLocProgram into waProgram.
+      myTabix = sy-tabix.
+      perform scanForIncludePrograms using waProgram-progName
+                                           recursiveIncludeSearch
+                                           customerOnly
+                                           customerNameRange
+                                           waProgram-iIncludes[].
+
+      modify iLocProgram from waProgram index myTabix.
+    endloop.
+  endif.
+
+* Once we have a list of all the includes we need to loop round them an select all the other objects
+  loop at iLocProgram into waProgram.
+    myTabix = sy-tabix.
+    perform findProgramDetails using waProgram-progName
+                                     waProgram-subc
+                                     waProgram-programTitle
+                                     waProgram
+                                     getTextElements
+                                     getMessages
+                                     getScreens
+                                     getCustDictStructures
+                                     customerOnly
+                                     customerNameRange.
+
+*   Find any screens
+    if not getScreens is initial.
+      perform findProgramScreenFlow using waProgram.
+    endif.
+
+    loop at waProgram-iIncludes into waInclude.
+      perform findProgramDetails using waInclude-includeName
+                                       'I'
+                                       waInclude-includeTitle
+                                       waProgram
+                                       getTextElements
+                                       getMessages
+                                       getScreens
+                                       getCustDictStructures
+                                       customerOnly
+                                       customerNameRange.
+    endloop.
+
+    modify iLocProgram from waProgram index myTabix.
+  endloop.
+
+* Now we have all the program includes and details we need to find extra functions
+  if not getFunctions is initial.
+    loop at iLocProgram into waProgram.
+*     Find any functions defined in the code
+      perform scanForFunctions using waProgram-progname
+                                     waProgram-progname
+                                     space
+                                     space
+                                     customerOnly
+                                     customerNameRange
+                                     iLocFunctions[].
+    endloop.
+  endif.
+
+* We have a list of all the functions so lets go and find details and other function calls
+  perform scanForAdditionalFuncStuff using iLocFunctions[]
+                                           recursiveIncludeSearch
+                                           recursiveFuncSearch
+                                           getIncludes
+                                           getFunctions
+                                           getCustDictStructures
+                                           getMessages
+                                           customerOnly
+                                           customerNameRange.
+endform.                                                                     "scanForAdditionalProgStuff
+
 
 
