@@ -2313,3 +2313,212 @@ data: genFlag type genFlag.
   endif.
 endform.                                                                       "findAllProgramsForAuthor
 
+*-------------------------------------------------------------------------------------------------------
+*  findProgramsByWildcard.. Search in the system for programs
+*-------------------------------------------------------------------------------------------------------
+form findProgramsByWildcard using iLocProgram like iPrograms[]
+                                  value(rangeProgram) like soProgramName[]
+                                  value(rangeAuthor) like soAuthor[]
+                                  value(custNameRange)
+                                  value(customerProgsOnly)
+                                  value(soLocPackage) like soPack[].
+
+data: altCustomerNameRange type string.
+field-symbols: <waProgram> type tProgram.
+data: genFlag type genFlag.
+
+  if customerProgsOnly is initial.
+*   build up the customer name range used for select statements
+    if custNameRange <> '^'.
+      concatenate custNameRange '%' into altCustomerNameRange.
+
+      select progname
+             subc
+             from reposrc
+             appending corresponding fields of table iLocProgram
+             where progname  in rangeProgram
+               and progname like altCustomerNameRange
+               and ( subc = '1' or subc = 'M' or subc = 'S' )
+               and ( cnam in rangeAuthor or unam in rangeAuthor ).
+    else.
+      select progname
+             subc
+             from reposrc
+             appending corresponding fields of table iLocProgram
+             where progname  in rangeProgram
+               and ( subc = '1' or subc = 'M' or subc = 'S' )
+               and ( cnam in rangeAuthor or unam in rangeAuthor ).
+    endif.
+  else.
+*   Only customer programs
+    if custNameRange <> '^'.
+      concatenate custNameRange '%' into altCustomerNameRange.
+
+      select progname
+             subc
+             from reposrc
+             appending corresponding fields of table iLocProgram
+             where progname  in rangeProgram
+               and ( progname like altCustomerNameRange
+                     or progname like 'Z%'
+                     or progname like 'Y%'
+                     or progname like 'SAPMZ%'
+                     or progname like 'SAPMY%')
+               and ( subc = '1' or subc = 'M' or subc = 'S' )
+               and ( cnam in rangeAuthor or unam in rangeAuthor ).
+    else.
+      select progname
+             subc
+             from reposrc
+             appending corresponding fields of table iLocProgram
+             where progname  in rangeProgram
+             and ( progname like 'Z%'
+                   or progname like 'Y%'
+                   or progname like 'SAPMZ%'
+                   or progname like 'SAPMY%')
+             and ( subc = '1' or subc = 'M' or subc = 'S' )
+             and ( cnam in rangeAuthor or unam in rangeAuthor ).
+    endif.
+  endif.
+endform.                                                                         "findProgramsByWildcard
+
+*-------------------------------------------------------------------------------------------------------
+*  retrieveProgramTexts... Find the text elements and selection texts for a program
+*-------------------------------------------------------------------------------------------------------
+form retrieveProgramTexts using iLocSelectionTexts like dumiTextTab[]
+                                iLocTextElements like dumiTextTab[]
+                                value(programName).
+
+data: iTextTable type standard table of tTextTable with header line.
+data: waTexts type tTextTable.
+data: castProgramName(50).
+
+  move programName to castProgramName.
+
+  read textpool castProgramName into iTextTable language pMLang.
+  delete iTextTable where key = 'R'.
+
+* Selection texts.
+  loop at iTextTable where id = 'S'.
+    move iTextTable-key to waTexts-key.
+    move iTextTable-entry to waTexts-entry.
+    append waTexts to iLocSelectiontexts.
+    clear waTexts.
+  endloop.
+
+* Text elements.
+  delete iTextTable where key = 'S'.
+  loop at iTextTable where id = 'I'.
+    move iTextTable-key to waTexts-key.
+    move iTextTable-entry to waTexts-entry.
+    append waTexts to iLocTextElements.
+  endloop.
+endform.                                                                           "retrieveProgramTexts
+
+*-------------------------------------------------------------------------------------------------------
+*  retrieveGUITitles...  Search for any GUI texts
+*-------------------------------------------------------------------------------------------------------
+form retrieveGUITitles using iLocGUITitle like dumIGUITitle[]
+                             value(programName).
+
+  select obj_code
+         text
+         from d347t
+         appending corresponding fields of table iLocGUItitle
+         where progname = programName.
+endform.                                                                              "retrieveGUITitles
+
+*-------------------------------------------------------------------------------------------------------
+*   findMainMessageClass... find the message class stated at the top of  program.
+*-------------------------------------------------------------------------------------------------------
+form findMainMessageClass using value(programName)
+                                      messageClass.
+
+  select single msgid
+                from trdire into messageClass
+                where report = programName.
+endform.                                                                           "findMainMessageClass
+
+*-------------------------------------------------------------------------------------------------------
+* retrieveClasses...    find classes and sub objects from SAP DB
+*-------------------------------------------------------------------------------------------------------
+form retrieveClasses using iLocClasses like iClasses[]
+                           iLocFunctions like iFunctions[]
+                           rangeClass like soClassName[]
+                           rangeAuthor like soAuthor[]
+                           value(custNameRange)
+                           value(alsoModifiedByauthor)
+                           value(customerProgsOnly)
+                           value(getMessages)
+                           value(getTextElements)
+                           value(getCustDictStructures)
+                           value(getFunctions)
+                           value(getIncludes)
+                           value(recursiveFuncSearch)
+                           value(recursiveIncludeSearch)
+                           value(recursiveClassSearch)
+                           value(language)
+                           value(soLocPackage) like soPack[].
+
+data: waRangeClass like line of rangeClass.
+data: waClass like line of iLocCLasses[].
+
+  if rangeClass[] is initial.
+*   We are finding all programs by an author
+    perform findAllClassesForAuthor using iLocClasses[]
+                                           rangeClass[]
+                                           rangeAuthor[]
+                                           custNameRange
+                                           alsoModifiedByAuthor
+                                           customerProgsOnly
+                                           language.
+  else.
+    read table rangeClass index 1 into waRangeClass.
+    if waRangeClass-low cs ASTERIX.
+      perform findClassesByWildcard using iLocClasses[]
+                                          rangeClass[]
+                                          rangeAuthor[]
+                                          custNameRange
+                                          customerProgsOnly
+                                          language.
+    else.
+      perform checkClassDoesExist using iLocClasses[]
+                                        rangeClass[].
+    endif.
+  endif.
+
+* Check the package
+  if not soLocPackage[] is initial.
+    loop at iLocClasses into waClass.
+      select single obj_name
+             from tadir
+             into waClass-clsName
+             where pgmid = 'R3TR'
+               and object = 'CLAS'
+               and obj_name = waClass-clsName
+               and devclass in soLocPackage[].
+      if sy-subrc <> 0.
+        delete iLocClasses.
+      endif.
+    endloop.
+  endif.
+
+* Find extra items
+  if not iLocClasses[] is initial.
+    perform scanForAdditionalClassStuff using iLocClasses[]
+                                              iLocFunctions[]
+                                              getTextElements
+                                              getMessages
+                                              getCustDictStructures
+                                              getFunctions
+                                              getIncludes
+                                              customerProgsOnly
+                                              custNameRange
+                                              recursiveIncludeSearch
+                                              recursiveFuncSearch
+                                              recursiveClassSearch
+                                              soLocPackage[].
+  endif.
+endform.                                                                                "retrieveClasses
+
+
