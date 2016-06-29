@@ -1,0 +1,2 @@
+T176                            Sales Documents: Customer Order Types                         800ZEDIEDi po type
+T176                            Sales Documents: Customer Order Types                         800ZED2EDI 2 PO type
