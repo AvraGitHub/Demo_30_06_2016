@@ -1807,5 +1807,88 @@ data: castProgramName type program.
    endloop.
 endform.                                                                                        "scanForIncludePrograms
 
+*----------------------------------------------------------------------------------------------------------------------
+* scanForFunctions... Search each program for function modules
+*----------------------------------------------------------------------------------------------------------------------
+form scanForFunctions using value(programName)
+                            value(programLinkName)
+                            value(recursiveIncludes)
+                            value(recursiveFunctions)
+                            value(customerOnly)
+                            value(customerNameRange)
+                                  iLocFunctions like iFunctions[].
+
+data: iIncludeLines type standard table of string with header line.
+data: iTokens type standard table of stokes with header line.
+data: iStatements type standard table of sstmnt with header line.
+data: waTokens type stokes.
+data: waFunction type tFunction.
+data: waFunctionComparison type tFunction.
+data: maxLines type i.
+data: nextLine type i.
+data: castProgramName type program.
+data: skipThisloop type abap_bool.
+
+* Read the program code from the textpool.
+  castProgramName = programName.
+  read report castProgramName into iIncludeLines.
+  scan abap-source iIncludeLines tokens into iTokens with includes statements into iStatements.
+  clear iIncludeLines[].
+
+  maxLines = lines( iTokens ).
+  loop at iTokens where str = FUNCTION and type = 'I'.
+
+     nextLine = sy-tabix + 1.
+     if nextLine <= maxLines.
+       read table iTokens index nextLine into waTokens.
+
+*      Are we only to find customer functions
+       skipThisLoop = FALSE.
+       if not customerOnly is initial.
+         try.
+           if waTokens-str+1(1) = 'Y' or waTokens-str+1(1) = 'Z' or waTokens-str cs customerNameRange.
+           else.
+             skipThisLoop = TRUE.
+           endif.
+         catch cx_sy_range_out_of_bounds into objRuntimeError.
+         cleanup.
+           skipThisLoop = TRUE.
+         endtry.
+       endif.
+
+       if skipThisLoop = FALSE.
+         waFunction-functionName = waTokens-str.
+         replace all occurrences of '''' in waFunction-functionName with ' '.
+         condense waFunction-functionName.
+
+*        Don't add a function if we alread have it listed.
+         read table iLocFunctions with key functionName = waFunction-functionName into waFunctionComparison.
+         if sy-subrc <> 0.
+*          Add in the link name if the function is linked to a program
+           waFunction-programLinkName = programLinkName.
+
+*          Don't download functions which are called through an RFC destination
+           nextline = sy-tabix + 2.
+           read table iTokens index nextLine into waTokens.
+           if waTokens-str <> DESTINATION.
+
+*            Find the function group
+             select single area from v_fdir into wafunction-functionGroup where funcName = waFunction-functionName.
+
+             if sy-subrc = 0.
+*              Best find the function number as well.
+               perform retrieveFunctionDetail using waFunction-functionName
+                                                    waFunction-progname
+                                                    waFunction-includeNumber
+                                                    waFunction-functionTitle.
+
+               perform findMainFunctionInclude using waFunction-progname
+                                                     waFunction-functionGroup
+                                                     waFunction-includeNumber
+                                                     waFunction-functionMainInclude.
+
+               perform findFunctionTopInclude using waFunction-progname
+                                                    wafunction-functionGroup
+                                                    waFunction-topIncludeName.
 
 
