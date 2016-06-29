@@ -1,0 +1,136 @@
+*&---------------------------------------------------------------------*
+*& Report  ZSALESORDERARUNAQ
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  ZSALESORDERARUNAQ.
+
+DATA:
+* Order partners
+* li_order_partners    TYPE STANDARD TABLE OF bapiparnr,
+* l_order_partners     LIKE bapiparnr,
+
+* Structures for order header
+* l_order_header_in    LIKE bapisdhd1,
+* l_order_header_inx   LIKE bapisdhd1x,
+lt_partners      type table of bapiparnr  with header line,
+ls_order_header_in     type bapisdhd1 ,
+ls_order_header_inx    type bapisdhd1x,
+
+* Tables for order items
+ "li_order_items_in    TYPE STANDARD TABLE OF bapisditm,
+lt_items_in      type table of bapisditm  with header line,
+ lt_items_inx     type table of bapisditmx with header line,
+
+ "li_order_items_inx   TYPE STANDARD TABLE OF bapisditmx,
+ "l_order_items_inx    LIKE bapisditmx,
+
+* Return table from bapi call
+ "li_return type table of bapiret2   with header line,
+ l_return  TYPE bapiret2,
+ lt_return        type table of bapiret2   with header line,
+
+* li_ORDER_SCHEDULES_INX TYPE STANDARD TABLE OF  BAPISCHDLX,
+* l_ORDER_SCHEDULES_INX LIKE  BAPISCHDLX,
+* li_ORDER_SCHEDULES_IN TYPE STANDARD TABLE OF  BAPISCHDL ,
+* l_ORDER_SCHEDULES_IN LIKE  BAPISCHDL ,
+lt_schedules_in  type table of bapischdl  with header line,
+ lt_schedules_inx type table of bapischdlx with header line,
+
+* Sales document number
+  l_vbeln LIKE bapivbeln-vbeln,
+  RETURN type BAPIRET2,
+* Error flag
+
+  l_errflag(1) TYPE c.
+
+
+*------------------------------------------------------------------
+* Build order header
+*------------------------------------------------------------------
+ls_order_header_in-doc_type   = 'TA'.
+        ls_order_header_in-sales_org  = 'AS01'.
+        ls_order_header_in-distr_chan = 'AD'.
+        ls_order_header_in-division   = 'D1'.
+        ls_order_header_in-sales_off  = 'ASSO'.
+        "ls_order_header_in-purch_no_c = '10000001'.
+        ls_order_header_inx-updateflag = 'I'.
+        ls_order_header_inx-doc_type   = 'X'.
+        ls_order_header_inx-sales_org  = 'X'.
+        ls_order_header_inx-distr_chan = 'X'.
+        ls_order_header_inx-division   = 'X'.
+        ls_order_header_inx-sales_off  = 'X'.
+
+*------------------------------------------------------------------
+* Build partner information
+*------------------------------------------------------------------
+  lt_partners-partn_role = 'AG'.
+  lt_partners-partn_numb = '0000004521'.
+  append lt_partners.
+*  CLEAR l_order_partners.
+*  l_order_partners-partn_role = 'AG'.          "Remember German codes !
+*  l_order_partners-partn_numb = '0000004521'."'0000002721'.
+*  APPEND l_order_partners TO li_order_partners.
+
+
+* Update flag
+*  ls_order_header_inx-updateflag = 'I'.
+*
+** Sales document type
+*  ls_order_header_in-doc_type    = 'TA'.        "Remember German codes !
+*  ls_order_header_inx-doc_type   = 'X'.
+*
+** Sales organization
+*  ls_order_header_in-sales_org  = 'AS01'.
+*  ls_order_header_inx-sales_org  = 'X'.
+*
+** Distribution channel
+*
+*  ls_order_header_in-distr_chan = 'AD'.
+*  ls_order_header_inx-distr_chan = 'X'.
+*
+** Division
+*  ls_order_header_in-division = 'D1'.
+*  ls_order_header_inx-division = 'X'.
+*
+** Incoterms
+* ls_order_header_in-INCOTERMS1  = 'CFR'.
+* ls_order_header_inx-INCOTERMS1  = 'X'.
+*
+* ls_order_header_in-INCOTERMS2  = 'Test'.
+* ls_order_header_inx-INCOTERMS2  = 'X'.
+*
+* " Terms of payment
+* ls_order_header_in-PMNTTRMS  = '0001'.
+* ls_order_header_inx-PMNTTRMS  = 'X'.
+
+* Purchase order
+*  l_order_header_in-purch_no_c = 'DG-19970626-300'.
+*  l_order_header_inx-purch_no_c = 'X'.
+
+
+*------------------------------------------------------------------
+* Build order item(s) - Only 1 is used in this example
+*------------------------------------------------------------------
+  lt_items_in-itm_number  = '000010'.
+        lt_items_in-material    = 'RACKET'.
+        "lt_items_in-sales_unit  = 'ST'.
+        lt_items_in-comp_quant = '450'.
+        lt_items_inx-comp_quant = 'X'.
+        lt_items_in-NET_WEIGHT = '450'.
+        lt_items_inx-NET_WEIGHT = 'X'.
+        lt_items_in-GROSS_WGHT = '500'.
+        lt_items_inx-GROSS_WGHT = 'X'.
+        lt_items_in-UNTOF_WGHT = 'KG'.
+        lt_items_inx-UNTOF_WGHT = 'X'.
+        lt_items_in-VOLUME = '10'.
+        lt_items_inx-VOLUME = 'X'.
+        lt_items_in-VOLUNIT = 'M3'.
+        lt_items_inx-VOLUNIT = 'X'.
+        lt_items_in-SHIP_POINT = 'ASSP'.
+        lt_items_inx-SHIP_POINT = 'X'.
+        lt_items_in-PLANT = 'ASP1'.
+        lt_items_inx-PLANT = 'X'.
