@@ -1,0 +1,65 @@
+*&---------------------------------------------------------------------*
+*& Report  ZCATTFILE1
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  ZCATTFILE1.
+
+TABLES: CATA,       "CATT - Allgemeine Daten eines Testablaufs ALT
+        TNODE02_A,  "CATT - Allgemeine Daten eines Testablaufs NEU
+        TNODE02_AC, "CATT - Catt-spezifische Attribute
+        TNODE02_AT, "CATT - Catt sprachabh. Kurztexte
+        CATF,       "CATT - Folgedaten/Coding des Testablauf
+        CATG,       "CATT - Grundtexte eines Testablaufs
+        CATK,       "CATT - Protokoll Vorgangsdaten
+        CATL,       "CATT - Protokoll Ablaufdaten
+        CATU,       "CATT - Ablaufvarianten
+        CATV,       "CATT - Variablentexte
+        CATP,       "CATT - Variablentypen
+        CATR,       "CATT - Rücksetzen von Tabellenänderungen
+        CATFS,      "CATT - Übergabestruktur Start von Testabläufen
+        CATFP,      "CATT - Parameterübergabe beim Start von Testabläuf
+        TADIR,      "CATT - Katalog der R/3-Repository-Objekte
+        E071.       "Transport: Objekt-Einträge von Aufträgen/Aufgaben
+
+
+***********************************************************************
+* Eingabemasken
+***********************************************************************
+
+* Selektionsmaske für das erste Bild
+* Aktion ( Up/Download, Pfad, Selektion der CATTs
+
+* Up/Download
+SELECTION-SCREEN BEGIN OF LINE.
+PARAMETERS DNFLAG RADIOBUTTON GROUP GR1.
+SELECTION-SCREEN COMMENT 3(31) TEXT-C02.
+SELECTION-SCREEN END OF LINE.
+SELECTION-SCREEN BEGIN OF LINE.
+PARAMETERS UPFLAG RADIOBUTTON GROUP GR1.
+SELECTION-SCREEN COMMENT 3(31) TEXT-C01.
+SELECTION-SCREEN END OF LINE.
+SELECTION-SCREEN BEGIN OF LINE.
+PARAMETERS DELFLAG RADIOBUTTON GROUP GR1.
+SELECTION-SCREEN COMMENT 3(31) TEXT-C05.
+SELECTION-SCREEN END OF LINE.
+
+SELECTION-SCREEN SKIP.
+
+* Pfad PC-File
+SELECTION-SCREEN BEGIN OF LINE.
+PARAMETERS PCFLAG RADIOBUTTON GROUP GR2.
+SELECTION-SCREEN COMMENT 3(31) TEXT-C03.
+PARAMETERS PCFILE LIKE IBIPPARMS-PATH DEFAULT 'C:\catt.dat'.
+SELECTION-SCREEN END OF LINE.
+
+* Pfad Unix-File
+SELECTION-SCREEN BEGIN OF LINE.
+PARAMETERS UXFLAG RADIOBUTTON GROUP GR2.
+SELECTION-SCREEN COMMENT 3(31) TEXT-C04.
+PARAMETERS UXFILE LIKE RLGRAP-FILENAME
+           DEFAULT '/net/usr.sap.trans/tmp/CATT.DAT'.
+SELECTION-SCREEN END OF LINE.
