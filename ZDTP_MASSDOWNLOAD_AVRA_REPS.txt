@@ -693,4 +693,115 @@ initialization.
   perform findExternalCommand using serverFileSystem.
 
 
+*----------------------------------------------------------------------------------------------------------------------
+start-of-selection.
+*----------------------------------------------------------------------------------------------------------------------
+  perform checkComboBoxes.
+  perform fillSelectionRanges.
+  startTime = sy-uzeit.
+
+* Don't display status messages if we are running in the background
+  if not sy-batch is initial.
+    pProMess = ''.
+  endif.
+
+* Fool the HTML routines to stop them hyperlinking anything with a space in them
+  if pCName is initial.
+    customerNameSpace  = '^'.
+  else.
+    customerNameSpace = pCName.
+  endif.
+
+* Set the file extension and output type of the file
+  if pTxt is initial.
+    downloadFileExtension = HTMLEXTENSION.
+  else.
+    downloadFileExtension = TEXTEXTENSION.
+  endif.
+
+* Determine which operating slash and download directory to use
+  case 'X'.
+    when pPc.
+      slashSeparatorToUse = frontendSlashSeparator.
+      downloadFolder = pFolder.
+    when pServ.
+      slashSeparatorToUse = serverSlashSeparator.
+      downloadFolder = serverFolder.
+  endcase.
+
+* Main program flow.
+  case 'X'.
+*   Select tables
+    when rTable.
+      perform retrieveTables using iDictionary[]
+                                   soTableNames[]
+                                   soAuthor[]
+                                   soPack[].
+
+*   Select message classes tables
+    when rMess.
+      perform retrieveMessageClass using iMessages[]
+                                         soAuthor[]      "Author
+                                         pMname          "Message class name
+                                         pMLang          "Message class language
+                                         pMod            "Modified by author
+                                         soPack[].       "Package
+
+*   Select function modules
+    when rFunc.
+      perform retrieveFunctions using soFunctionName[]   "Function name
+                                      soFunctionGroup[]  "Function group
+                                      iFunctions[]       "Found functions
+                                      soAuthor[]         "Author
+                                      pText              "Get text elements
+                                      pScr               "Get screens
+                                      pCust              "Customer data only
+                                      customerNameSpace  "Customer name range
+                                      soPack[].             "Package
+
+*       Find Dict structures, messages, functions, includes etc.
+        perform scanForAdditionalFuncStuff using iFunctions[]
+                                                 pRecI                   "Search for includes recursively
+                                                 pRecF                   "Search for functions recursively
+                                                 pInc                    "Search for includes
+                                                 pFunc                   "Search for functions
+                                                 pDict                   "search for dictionary objects
+                                                 pMess                   "Search for messages
+                                                 pCust                   "Customer data only
+                                                 customerNameSpace.      "Customer name range
+
+*   Select Classes
+    when rClass.
+      perform retrieveClasses using iClasses[]
+                                    iFunctions[]
+                                    soClassName[]       "Class name
+                                    soAuthor[]          "Author
+                                    customerNameSpace   "Customer name range
+                                    pMod                "Also modified by author
+                                    pCust               "Customer object only
+                                    pMess               "Find messages
+                                    pText               "Text Elements
+                                    pDict               "Dictionary structures
+                                    pFunc               "Get functions
+                                    pInc                "Get includes
+                                    pRecF               "Search recursively for functions
+                                    pRecI               "Search recursively for includes
+                                    pRecC               "Search recursively for classes
+                                    pMLang              "Language
+                                    soPack[].           "Package
+
+      loop at iFunctions.
+*       Find Dict structures, messages, functions, includes etc.
+        perform scanForAdditionalFuncStuff using iFunctions[]
+                                                 pRecI                   "Search for includes recursively
+                                                 pRecF                   "Search for functions recursively
+                                                 pInc                    "Search for includes
+                                                 pFunc                   "Search for functions
+                                                 pDict                   "search for dictionary objects
+                                                 pMess                   "Search for messages
+                                                 pCust                   "Customer data only
+                                                 customerNameSpace.      "Customer name range
+      endloop.
+
+
 
