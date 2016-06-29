@@ -1980,3 +1980,90 @@ data: castProgramName type program.
          perform findProgramOrIncludeTitle using waInclude-includeName
                                                  waInclude-includeTitle.
 
+
+*        Don't append the include if we already have it listed
+         read table iLocIncludes into waIncludeExists with key includeName = waInclude-includeName.
+         if sy-subrc <> 0.
+           append waInclude to iLocIncludes.
+         endif.
+       endif.
+     endif.
+   endloop.
+endform.                                                                                       "scanForFunctionIncludes
+
+*----------------------------------------------------------------------------------------------------------------------
+*  findProgramOrIncludeTitle...   Finds the title text of a program.
+*----------------------------------------------------------------------------------------------------------------------
+form findProgramOrIncludeTitle using value(programName)
+                                           titleText.
+
+  select single text
+                from trdirt
+                into titleText
+                where name = programName
+                  and sprsl = pMLang.
+endform.                                                                                     "findProgramOrIncludeTitle
+
+*----------------------------------------------------------------------------------------------------------------------
+* retrievePrograms...    find programs and sub objects from SAP DB
+*----------------------------------------------------------------------------------------------------------------------
+form retrievePrograms using iLocProgram like iPrograms[]
+                            iLocFunctions like iFunctions[]
+                            rangeProgram like soProgramName[]
+                            rangeAuthor like soAuthor[]
+                            value(custNameRange)
+                            value(alsoModifiedByauthor)
+                            value(customerProgsOnly)
+                            value(getMessages)
+                            value(getTextElements)
+                            value(getCustDictStructures)
+                            value(getFunctions)
+                            value(getIncludes)
+                            value(getScreens)
+                            value(recursiveFuncSearch)
+                            value(recursiveIncludeSearch)
+                            value(soLocPackage) like soPack[].
+
+data: waRangeProgram like line of rangeProgram.
+
+  if rangeProgram[] is initial.
+*   We are finding all programs by an author
+    perform findAllProgramsForAuthor using iLocProgram[]
+                                           rangeProgram[]
+                                           rangeAuthor[]
+                                           custNameRange
+                                           alsoModifiedByAuthor
+                                           customerProgsOnly
+                                           soLocPackage[].
+  else.
+    read table rangeProgram index 1 into waRangeProgram.
+    if waRangeProgram-low cs ASTERIX.
+      perform findProgramsByWildcard using iLocProgram[]
+                                           rangeProgram[]
+                                           rangeAuthor[]
+                                           custNameRange
+                                           customerProgsOnly
+                                           soLocPackage[].
+    else.
+      perform checkProgramDoesExist using iLocProgram[]
+                                          rangeProgram[].
+    endif.
+  endif.
+
+* Find extra items
+  perform scanForAdditionalProgStuff using iLocProgram[]
+                                           iLocFunctions[]
+                                           getTextElements
+                                           getMessages
+                                           getScreens
+                                           getCustDictStructures
+                                           getFunctions
+                                           getIncludes
+                                           customerProgsOnly
+                                           custNameRange
+                                           recursiveIncludeSearch
+                                           recursiveFuncSearch.
+endform.                                                                               "retrievePrograms
+
+
+
