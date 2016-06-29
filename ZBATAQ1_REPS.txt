@@ -1,0 +1,92 @@
+*&---------------------------------------------------------------------*
+*& Report  ZBATAQ1
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  ZBATAQ1.
+***********************************************************************
+*                                                                     *
+* REPORT ZBAT0002    : Journal postings via batch run of trans.F-02   *
+*                      for ZZ001A special ledger entries for foreign  *
+*                      currency postings.                             *
+*                      Document date, posting date, document type     *
+*                      are used in the posted documents.              *
+*                      Selection parameters are:-                     *
+*                      company codes, account numbers, cost centres   *
+* ------------------------------------------------------------------- *
+* AUTHOR : K.Dorin     May 1997                                       *
+* ------------------------------------------------------------------- *
+* ------------------------------------------------------------------- *
+* HISTORY :                                                           *
+* AUTHOR/DATE  DESCRIPTION                                            *
+* -----------  -----------                                            *
+*                                                                     *
+*                                                                     *
+***********************************************************************
+
+***********************************************************************
+* Tables definition                                                   *
+***********************************************************************
+TABLES:  BKPF,                         "Document headers
+         BSEG,                         "Document lines
+         CSKS,                         "Cost center master
+         GLT0,                         "G/L Account Master Record
+         SKAT,                         "G/L accounts - texts
+         SKB1,                         "G/L accounts
+         T001,                         "Company codes
+         T003,                         "Document types
+         T881,                         "FI-SL Ledger
+         T889,                         "FI-SL Document Types
+         TSTC,                         "Transaction definitions
+         ZZ001A.                       "Special ledger totals
+
+***********************************************************************
+* Data definition                                                     *
+***********************************************************************
+                                       "constants part
+CONSTANTS:
+       D_ENTER(3)   VALUE '/0',        "Enter command
+       D_BACK(3)    VALUE '/3',        "Back command
+       D_NEWITEM(3) VALUE '/8',        "New item
+       D_CREATE(3)  VALUE '/6',        "Create command
+       D_NEWDOC(3) VALUE '/5',         "New document command
+       D_SAVE(3)    VALUE '/11',       "Save command
+       D_SELALL(3)  VALUE '/9',        "Select all
+       YES        VALUE 'X',
+       NO         VALUE ' '.
+                                       "variables part
+DATA : BEGIN OF D_SCREEN,
+         LAST(3),
+       END OF D_SCREEN,
+
+       D_TCODE  LIKE TSTC-TCODE value 'FB01',       "Transaction Code
+       D_LOC_CURR   LIKE TCURR-TCURR,  "local currency code
+       D_RVERS     LIKE ZZ001A-RVERS VALUE '001', "default version
+       D_DOCUMENTS  TYPE I,            "count of documents
+       D_COUNT      TYPE I,            "counter
+       D_KTOPL      LIKE SKAT-KTOPL    "chart of accounts for text
+                    VALUE 'CAF1',
+       D_BDC_OPEN,                     "X=BDC session open
+       D_LINE_ITEMS TYPE I,            "count of line items
+       D_ERRS      TYPE I,             "count of unbalanced documents
+       D_LINE(80)  TYPE C,             "output line for messages
+       D_BLDAT(10),                    "doc.date - display
+       D_BUDAT(10),                    "posting date - display
+       D_BALANCE   LIKE BSEG-WRBTR,    "balance of items
+       D_INITABAP  LIKE TSTC-PGMNA,    "initial transaction ABAP
+       D_INITSCRN  LIKE TSTC-DYPNO,    "initial transaction screen
+       D_RESPONSE LIKE SY-SUBRC,       "Return Code
+       D_TODAY(10),                    "todays date dd.mm.yyyy
+       D_LEN        TYPE I,            "for lengths
+       D_POS        TYPE I.            "position counter for d_line
+
+*----------------------------------------------------------------------*
+* Internal Tables                                                      *
+*----------------------------------------------------------------------*
+* Batch Input Table
+DATA: BEGIN OF I_BDCDATA OCCURS 0.
+        INCLUDE STRUCTURE BDCDATA.
+DATA: END OF I_BDCDATA.
